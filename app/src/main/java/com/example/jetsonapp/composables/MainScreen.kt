@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -40,6 +41,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val serverResult by jetsonViewModel.serverResult.collectAsStateWithLifecycle()
+    val jetsonIsWorking by jetsonViewModel.jetsonIsWorking.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
@@ -98,6 +100,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 
         Button(onClick = {
             jetsonViewModel.updateUserPrompt(typedInput)
+            jetsonViewModel.updateServerResult("")
             jetsonViewModel.sendData()
             focusManager.clearFocus(true)
             focusRequester.freeFocus()
@@ -137,6 +140,13 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                     fontSize = 20.sp,
                     style = TextStyle(lineHeight = 32.sp),
                     textAlign = TextAlign.Start
+                )
+            }
+
+            if (jetsonIsWorking) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color.Black
                 )
             }
         }

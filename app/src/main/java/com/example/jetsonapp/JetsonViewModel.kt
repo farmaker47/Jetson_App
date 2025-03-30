@@ -27,11 +27,18 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private val _serverResult = MutableStateFlow("")
     val serverResult = _serverResult.asStateFlow()
-    private fun updateServerResult(newValue: String) {
+    fun updateServerResult(newValue: String) {
         _serverResult.value = newValue
     }
 
+    private val _jetsonIsWorking = MutableStateFlow(false)
+    val jetsonIsWorking = _jetsonIsWorking.asStateFlow()
+    private fun updateJetsonIsWorking(newValue: Boolean) {
+        _jetsonIsWorking.value = newValue
+    }
+
     fun sendData() {
+        updateJetsonIsWorking(true)
         viewModelScope.launch {
             try {
                 val request = GenerateRequest(
@@ -44,17 +51,21 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     val body = response.body()
                     if (body != null) {
                         updateServerResult(body.response)
+                        updateJetsonIsWorking(false)
                         Log.v("response_", body.response)
                     } else {
+                        updateJetsonIsWorking(false)
                         updateServerResult("No response body received.")
                     }
                 } else {
+                    updateJetsonIsWorking(false)
                     updateServerResult("Error: ${response.code()} - ${response.message()}")
                 }
             } catch (e: IOException) {
-                // Network issue or conversion error
+                updateJetsonIsWorking(false)
                 updateServerResult("Network error: ${e.message}")
             } catch (e: Exception) {
+                updateJetsonIsWorking(false)
                 updateServerResult("Unexpected error: ${e.message}")
             }
         }
