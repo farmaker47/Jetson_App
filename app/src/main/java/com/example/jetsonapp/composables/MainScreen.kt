@@ -3,8 +3,10 @@ package com.example.jetsonapp.composables
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +40,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val serverResult by jetsonViewModel.serverResult.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,15 +126,18 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 .border(width = 1.dp, color = Color.Gray, shape = RoundedCornerShape(16.dp))
                 .padding(16.dp)
         ) {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = serverResult,
-                color = Color.Black,
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                style = TextStyle(lineHeight = 32.sp),
-                textAlign = TextAlign.Center,
-            )
+            Column(
+                modifier = Modifier.verticalScroll(scrollState)
+            ) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = serverResult,
+                    color = Color.Black,
+                    fontSize = 20.sp,
+                    style = TextStyle(lineHeight = 32.sp),
+                    textAlign = TextAlign.Start
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(48.dp))

@@ -1,6 +1,7 @@
 package com.example.jetsonapp
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.ApiService
@@ -42,7 +43,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
-                        updateServerResult(body.result)
+                        updateServerResult(body.response)
+                        Log.v("response_", body.response)
                     } else {
                         updateServerResult("No response body received.")
                     }
