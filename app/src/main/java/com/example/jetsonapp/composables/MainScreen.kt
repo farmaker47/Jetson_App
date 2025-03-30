@@ -29,13 +29,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.jetsonapp.JetsonViewModel
 
 @Composable
-fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
+fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     var typedInput by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+    val serverResult by jetsonViewModel.serverResult.collectAsStateWithLifecycle()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,7 +93,8 @@ fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = {
-            infoViewModel.sendData()
+            jetsonViewModel.updateUserPrompt(typedInput)
+            jetsonViewModel.sendData()
             focusManager.clearFocus(true)
             focusRequester.freeFocus()
         }, modifier = Modifier.align(Alignment.End)) {
@@ -122,7 +125,7 @@ fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "infoViewModel.serverResult",
+                text = serverResult,
                 color = Color.Black,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
