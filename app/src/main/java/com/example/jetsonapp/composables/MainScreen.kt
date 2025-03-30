@@ -4,15 +4,25 @@ package com.example.jetsonapp.composables
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +33,9 @@ import com.example.jetsonapp.JetsonViewModel
 
 @Composable
 fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
+    var typedInput by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -30,27 +43,58 @@ fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
     ) {
         Spacer(modifier = Modifier.height(48.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(width = 2.dp, color = Color.Black, shape = RoundedCornerShape(16.dp))
-                .padding(16.dp)
-        ) {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "infoViewModel.topText",
-                color = Color.Black,
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                style = TextStyle(lineHeight = 32.sp),
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            modifier = Modifier.fillMaxWidth(),
+            text = "Write something and send it to Jetson!",
+            color = Color.Black,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 32.sp,
+            textAlign = TextAlign.Center,
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Middle Element: Button sized to wrap its content.
-        Button(onClick = { infoViewModel.sendData() }, modifier = Modifier.align(Alignment.End)) {
+        OutlinedTextField(
+            value = typedInput,
+            onValueChange = { newText -> typedInput = newText },
+            placeholder = { Text(text = "Enter prompt...", color = Color.Gray) },
+            textStyle = TextStyle(
+                color = Color.Black,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Start
+            ),
+            singleLine = false,
+            maxLines = 4,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                unfocusedTextColor = Color.Black,
+                focusedTextColor = Color.Black,
+                cursorColor = Color.Black,
+                focusedIndicatorColor = Color.Black,
+                unfocusedIndicatorColor = Color.Black
+            ),
+            keyboardActions =
+            KeyboardActions(
+                onSend = {
+                    focusManager.clearFocus(true)
+                    focusRequester.freeFocus()
+                }
+            )
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            infoViewModel.sendData()
+            focusManager.clearFocus(true)
+            focusRequester.freeFocus()
+        }, modifier = Modifier.align(Alignment.End)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -69,7 +113,6 @@ fun MainScreen(infoViewModel: JetsonViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Bottom Element: Box that takes up all the remaining space.
         Box(
             modifier = Modifier
                 .weight(1f)
