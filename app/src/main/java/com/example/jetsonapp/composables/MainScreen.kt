@@ -67,6 +67,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             textStyle = TextStyle(
                 color = Color.Black,
                 fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Start
             ),
             singleLine = false,
