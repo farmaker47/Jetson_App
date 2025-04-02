@@ -1,6 +1,9 @@
 package com.example.jetsonapp.composables
 
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
@@ -25,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -37,12 +42,22 @@ import com.example.jetsonapp.JetsonViewModel
 
 @Composable
 fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
+    val context = LocalContext.current
     var typedInput by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val serverResult by jetsonViewModel.serverResult.collectAsStateWithLifecycle()
     val jetsonIsWorking by jetsonViewModel.jetsonIsWorking.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
+
+    // https://developer.android.com/training/data-storage/shared/documents-files
+    val pdfPickerLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                jetsonViewModel.updateSelectedImage(context, uri)
+            }
+        }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -98,26 +113,59 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Button(onClick = {
-            jetsonViewModel.updateUserPrompt(typedInput)
-            jetsonViewModel.updateServerResult("")
-            jetsonViewModel.sendData()
-            focusManager.clearFocus(true)
-            focusRequester.freeFocus()
-        }, modifier = Modifier.align(Alignment.End)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Send",
-                    color = Color.Black,
-                    fontSize = 24.sp,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(onClick = {
+                pdfPickerLauncher.launch(
+                    arrayOf(
+                        "image/*"
+                        // "application/pdf"
+                        // "text/plain",
+                        // "application/msword",  // .doc
+                        // "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        // // .docx
+                    )
                 )
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "Send Icon"
-                )
+            }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddCircle,
+                        contentDescription = "Send Icon"
+                    )
+                    Text(
+                        text = "Image",
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                    )
+                }
+            }
+
+            Button(onClick = {
+                jetsonViewModel.updateUserPrompt(typedInput)
+                jetsonViewModel.updateServerResult("")
+                jetsonViewModel.sendData()
+                focusManager.clearFocus(true)
+                focusRequester.freeFocus()
+            }) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Send",
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Send Icon"
+                    )
+                }
             }
         }
 
