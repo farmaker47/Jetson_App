@@ -1,14 +1,25 @@
 package com.example.jetsonapp.internet
 
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.Streaming
 
+// Use for not streaming
 interface ApiService {
     @POST("api/generate")
     suspend fun generate(
         @Body request: GenerateRequest
     ): Response<GenerateResponse>
+}
+
+interface ApiStreamingService {
+    @POST("api/generate")
+    @Streaming
+    suspend fun generate(
+        @Body request: GenerateRequest
+    ): Response<ResponseBody>
 }
 
 data class GenerateRequest(
@@ -53,4 +64,13 @@ data class GenerateResponse(
     val prompt_eval_duration: Long,
     val eval_count: Int,
     val eval_duration: Long
+)
+
+// Result from the server when stream = true is used.
+// {"model":"gemma3:4b","created_at":"2025-04-02T05:57:31.316978184Z","response":"The","done":false}
+data class GenerateStreamResponse(
+    val model: String,
+    val created_at: String,
+    val response: String,
+    val done: Boolean
 )
