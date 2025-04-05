@@ -7,6 +7,7 @@ import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.ApiStreamingService
+import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.GenerateStreamResponse
 import com.google.gson.Gson
@@ -20,6 +21,7 @@ import okhttp3.ResponseBody
 import java.io.BufferedReader
 import java.io.IOException
 
+@Suppress("IMPLICIT_CAST_TO_ANY")
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
     application: Application,
@@ -62,12 +64,20 @@ class JetsonViewModel @javax.inject.Inject constructor(
         // For streaming purposes IO dispatcher is preferred
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val request = GenerateRequest(
-                    model = MODEL,
-                    prompt = userPrompt.value,
-                    stream = true,
-                    images = arrayOf(selectedImage)
-                )
+                val request = if (selectedImage.isEmpty()) {
+                    GenerateRequest(
+                        model = MODEL,
+                        prompt = userPrompt.value,
+                        stream = true
+                    )
+                } else {
+                    GenerateImageRequest(
+                        model = MODEL,
+                        prompt = userPrompt.value,
+                        stream = true,
+                        images = listOf(selectedImage)
+                    )
+                }
                 val response = apiService.generate(request)
                 if (response.isSuccessful && response.body() != null) {
                     // Use for non streaming
