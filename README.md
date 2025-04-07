@@ -146,4 +146,4 @@ The most important parts of the code for interacting with the Ollama API from an
 
 You can easily customize the application built with these components to use any of the available Gemma 3 models (or other models) hosted by your local Ollama server by changing the `"model"` parameter in your request body.
 
-Check a full guide on [Medium]()
+Check a full guide on [Medium](https://medium.com/p/d1649b5300a4)
