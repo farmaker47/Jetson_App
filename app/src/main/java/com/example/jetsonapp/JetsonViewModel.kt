@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.ApiStreamingService
@@ -102,7 +103,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 updateJetsonIsWorking(false)
                 updateServerResult("Unexpected error: ${e.message}")
             } finally {
-                selectedImage = ""
+                // selectedImage = ""
             }
         }
     }
@@ -114,8 +115,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 val line = reader.readLine() ?: break
                 // Update the Compose state on the main thread.
                 withContext(Dispatchers.Main) {
-                    // streamingResponse.value += "$line\n"
-                    // Log.v("streaming", line)
+                    Log.v("streaming_", line)
                     _serverResult.value += JsonParser.parseResponse(line)
                     updateJetsonIsWorking(false)
                 }
