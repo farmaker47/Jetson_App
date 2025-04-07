@@ -14,6 +14,8 @@ interface ApiService {
     ): Response<GenerateResponse>
 }
 
+// Apparently this interface works with streaming and not streaming
+// Change the appropriate value stream = true in the view model.
 interface ApiStreamingService {
     @POST("api/generate")
     @Streaming
