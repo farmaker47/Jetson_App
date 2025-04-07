@@ -1,5 +1,5 @@
 ## Overview
-Running Gemma 3 with Ollama on Jetson Orin Nano and use the result on android.
+Running Gemma 3 with Ollama on Jetson Orin Nano and use the API response on android.
 
 ---
 ## Some insights first about the project
