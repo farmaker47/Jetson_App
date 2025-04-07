@@ -1,7 +1,7 @@
 ## Overview
 Running Gemma 3 with Ollama on Jetson Orin Nano and use the API response on android.
 
-<img src="https://github.com/farmaker47/Jetson_App/blob/master/gemma_3.png" alt="Gemma 3 Logo" width="700">
+<img src="https://github.com/farmaker47/Jetson_App/blob/master/gemma.png" alt="Gemma 3 Logo" width="700">
 
 ---
 ## Some insights first about the project
