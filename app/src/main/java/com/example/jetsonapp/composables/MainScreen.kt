@@ -51,7 +51,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val scrollState = rememberScrollState()
 
     // https://developer.android.com/training/data-storage/shared/documents-files
-    val pdfPickerLauncher =
+    val imagePickerLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             uri?.let {
                 jetsonViewModel.updateSelectedImage(context, uri)
@@ -118,7 +118,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Button(onClick = {
-                pdfPickerLauncher.launch(
+                imagePickerLauncher.launch(
                     arrayOf(
                         "image/*"
                         // "application/pdf"
