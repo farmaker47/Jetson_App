@@ -18,7 +18,7 @@ object NetworkModule {
     // In my case it was 192.168.1.92
     // Port for Jetson Orin Nano is 11434
     // Since we use http for the local server then use android:usesCleartextTraffic="true" at the manifest
-    private const val BASE_URL = "http://192.168.1.92:11434/"
+    private const val BASE_URL = "https://8fdd-2a02-2149-8a02-e000-ecc3-e96c-f10e-b812.ngrok-free.app/"
 
     @Provides
     @Singleton

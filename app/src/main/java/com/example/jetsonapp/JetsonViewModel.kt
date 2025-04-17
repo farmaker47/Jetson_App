@@ -9,7 +9,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.ApiStreamingService
 import com.example.jetsonapp.internet.GenerateImageRequest
-import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.GenerateStreamResponse
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,20 +64,11 @@ class JetsonViewModel @javax.inject.Inject constructor(
         // For streaming purposes IO dispatcher is preferred
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val request = if (selectedImage.isEmpty()) {
-                    GenerateRequest(
-                        model = MODEL,
-                        prompt = userPrompt.value,
-                        stream = true
-                    )
-                } else {
-                    GenerateImageRequest(
-                        model = MODEL,
-                        prompt = userPrompt.value,
-                        stream = true,
-                        images = listOf(selectedImage)
-                    )
-                }
+                val request = GenerateImageRequest(
+                    prompt = userPrompt.value,
+                    stream = false,
+                    images = listOf(selectedImage)
+                )
                 val response = apiService.generate(request)
                 if (response.isSuccessful && response.body() != null) {
                     // Use for non streaming
@@ -140,7 +130,7 @@ object JsonParser {
     fun parseResponse(jsonLine: String): String {
         return try {
             val streamResponse = gson.fromJson(jsonLine, GenerateStreamResponse::class.java)
-            streamResponse.response
+            streamResponse.result
         } catch (e: Exception) {
             e.printStackTrace()
             ""
