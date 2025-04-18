@@ -14,19 +14,22 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-    // On the host machine do a "hostname -I" to check the IP
-    // In my case it was 192.168.1.92
-    // Port for Jetson Orin Nano is 11434
-    // Since we use http for the local server then use android:usesCleartextTraffic="true" at the manifest
-    private const val BASE_URL = "https://8fdd-2a02-2149-8a02-e000-ecc3-e96c-f10e-b812.ngrok-free.app/"
+    // ngrok spits out the base_url
+    // Use it below
+    private const val BASE_URL = "https://15f7-34-125-10-43.ngrok-free.app/"
 
     @Provides
     @Singleton
     fun provideRetrofit(): Retrofit {
         val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            // zero = no timeout
+            .connectTimeout(0, TimeUnit.MILLISECONDS)
+            .readTimeout   (0, TimeUnit.MILLISECONDS)
+            .writeTimeout  (0, TimeUnit.MILLISECONDS)
+            // total call timeout (DNS + connection + request + response)
+            .callTimeout   (0, TimeUnit.MILLISECONDS)
+            // optional: retry on failures
+            // .retryOnConnectionFailure(true)
             .build()
 
         return Retrofit.Builder()
@@ -35,12 +38,6 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-
-    // Use for non streaming.
-    /*@Provides
-    @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService =
-        retrofit.create(ApiService::class.java)*/
 
     @Provides
     @Singleton

@@ -118,34 +118,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Button(onClick = {
-                imagePickerLauncher.launch(
-                    arrayOf(
-                        "image/*"
-                        // "application/pdf"
-                        // "text/plain",
-                        // "application/msword",  // .doc
-                        // "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        // // .docx
-                    )
-                )
-            }) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddCircle,
-                        contentDescription = "Send Icon"
-                    )
-                    Text(
-                        text = "Image",
-                        color = Color.Black,
-                        fontSize = 24.sp,
-                    )
-                }
-            }
-
-            Button(onClick = {
                 jetsonViewModel.updateUserPrompt(typedInput)
                 jetsonViewModel.updateServerResult("")
                 jetsonViewModel.sendData()
