@@ -1,7 +1,6 @@
 package com.example.jetsonapp
 
 import android.app.Application
-import android.content.Context
 import android.content.ContentValues
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -10,7 +9,6 @@ import kotlinx.coroutines.withContext
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.ApiStreamingService
@@ -53,18 +51,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
     private var mediaPlayer: MediaPlayer? = null
 
-    private var selectedImage = ""
-    fun updateSelectedImage(context: Context, uri: Uri) {
-        selectedImage = try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
-                val bytes = stream.readBytes()
-                Base64.encodeToString(bytes, Base64.NO_WRAP)
-            } ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
     fun sendData() {
         updateJetsonIsWorking(true)
         // For streaming purposes IO dispatcher is preferred
@@ -72,6 +58,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             try {
                 val request = GenerateImageRequest(
                     prompt = userPrompt.value,
+                    voice = "af_heart"
                 )
                 val response = apiService.generate(request)
                 if (response.isSuccessful && response.body() != null) {

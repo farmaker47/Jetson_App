@@ -1,9 +1,6 @@
 package com.example.jetsonapp.composables
 
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +11,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
@@ -29,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -42,21 +37,12 @@ import com.example.jetsonapp.JetsonViewModel
 
 @Composable
 fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
-    val context = LocalContext.current
     var typedInput by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     val serverResult by jetsonViewModel.serverResult.collectAsStateWithLifecycle()
     val jetsonIsWorking by jetsonViewModel.jetsonIsWorking.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
-
-    // https://developer.android.com/training/data-storage/shared/documents-files
-    val imagePickerLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-            uri?.let {
-                jetsonViewModel.updateSelectedImage(context, uri)
-            }
-        }
 
     Column(
         modifier = Modifier

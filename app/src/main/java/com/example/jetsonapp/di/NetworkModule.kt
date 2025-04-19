@@ -16,7 +16,7 @@ import javax.inject.Singleton
 object NetworkModule {
     // ngrok spits out the base_url
     // Use it below
-    private const val BASE_URL = "https://15f7-34-125-10-43.ngrok-free.app/"
+    private const val BASE_URL = "https://50fe-34-125-8-203.ngrok-free.app/"
 
     @Provides
     @Singleton

@@ -16,4 +16,5 @@ interface ApiStreamingService {
 
 data class GenerateImageRequest(
     val prompt: String,
+    val voice: String,
 )
