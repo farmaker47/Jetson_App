@@ -53,7 +53,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 
         Text(
             modifier = Modifier.fillMaxWidth(),
-            text = "Write something and send it to Jetson!",
+            text = "Write something and send it to server",
             color = Color.Black,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
