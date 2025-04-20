@@ -1,6 +1,6 @@
 package com.example.jetsonapp.di
 
-import com.example.jetsonapp.internet.ApiStreamingService
+import com.example.jetsonapp.internet.ApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,13 +37,13 @@ object NetworkModule {
     }
 
     // Use for non streaming.
-    /*@Provides
-    @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService =
-        retrofit.create(ApiService::class.java)*/
-
     @Provides
     @Singleton
+    fun provideApiService(retrofit: Retrofit): ApiService =
+        retrofit.create(ApiService::class.java)
+
+    /*@Provides
+    @Singleton
     fun provideApiService(retrofit: Retrofit): ApiStreamingService =
-        retrofit.create(ApiStreamingService::class.java)
+        retrofit.create(ApiStreamingService::class.java)*/
 }

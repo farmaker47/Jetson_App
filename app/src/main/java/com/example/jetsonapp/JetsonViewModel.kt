@@ -7,7 +7,7 @@ import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.jetsonapp.internet.ApiStreamingService
+import com.example.jetsonapp.internet.ApiService
 import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.GenerateStreamResponse
@@ -26,7 +26,7 @@ import java.io.IOException
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
     application: Application,
-    private val apiService: ApiStreamingService // change for non streaming flows
+    private val apiService: ApiService // change for non streaming flows
 ) :
     AndroidViewModel(application) {
 
@@ -69,29 +69,29 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     GenerateRequest(
                         model = MODEL,
                         prompt = userPrompt.value,
-                        stream = true
+                        stream = false
                     )
                 } else {
                     GenerateImageRequest(
                         model = MODEL,
                         prompt = userPrompt.value,
-                        stream = true,
+                        stream = false,
                         images = listOf(selectedImage)
                     )
                 }
                 val response = apiService.generate(request)
                 if (response.isSuccessful && response.body() != null) {
                     // Use for non streaming
-//                    val body = response.body()
-//                    if (body != null) {
-//                        updateServerResult(body.response)
-//                        updateJetsonIsWorking(false)
-//                        Log.v("response_", body.response)
-//                    } else {
-//                        updateJetsonIsWorking(false)
-//                        updateServerResult("No response body received.")
-//                    }
-                    processStream(response.body()!!)
+                    val body = response.body()
+                    if (body != null) {
+                        updateServerResult(body.response)
+                        updateJetsonIsWorking(false)
+                        Log.v("response_", body.response)
+                    } else {
+                        updateJetsonIsWorking(false)
+                        updateServerResult("No response body received.")
+                    }
+                    // processStream(response.body()!!)
                 } else {
                     updateJetsonIsWorking(false)
                     updateServerResult("Error: ${response.code()} - ${response.message()}")
