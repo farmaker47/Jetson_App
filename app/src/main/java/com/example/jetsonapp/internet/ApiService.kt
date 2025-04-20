@@ -7,7 +7,7 @@ import retrofit2.http.POST
 import retrofit2.http.Streaming
 
 // Use for not streaming
-interface ApiService {
+interface OllamaService {
     @POST("api/generate")
     suspend fun generate(
         @Body request: Any
@@ -16,7 +16,7 @@ interface ApiService {
 
 // Apparently this interface works with streaming and not streaming
 // Change the appropriate value stream = true in the view model.
-interface ApiStreamingService {
+interface OllamaStreamingService {
     @POST("api/generate")
     @Streaming
     suspend fun generate(
@@ -59,4 +59,21 @@ data class GenerateStreamResponse(
     val created_at: String,
     val response: String,
     val done: Boolean
+)
+
+
+
+////////////////////////////////////////////////
+// Kokoro section
+interface KokoroService {
+    @POST("api/generate")
+    @Streaming
+    suspend fun generate(
+        @Body request: Any
+    ): Response<ResponseBody>
+}
+
+data class KokoroRequest(
+    val prompt: String,
+    val voice: String,
 )

@@ -7,10 +7,11 @@ import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.jetsonapp.internet.ApiService
 import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.GenerateStreamResponse
+import com.example.jetsonapp.internet.KokoroService
+import com.example.jetsonapp.internet.OllamaService
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,8 @@ import java.io.IOException
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
     application: Application,
-    private val apiService: ApiService // change for non streaming flows
+    private val ollamaService: OllamaService,
+    private val kokoroService: KokoroService
 ) :
     AndroidViewModel(application) {
 
@@ -79,7 +81,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                         images = listOf(selectedImage)
                     )
                 }
-                val response = apiService.generate(request)
+                val response = ollamaService.generate(request)
                 if (response.isSuccessful && response.body() != null) {
                     // Use for non streaming
                     val body = response.body()
