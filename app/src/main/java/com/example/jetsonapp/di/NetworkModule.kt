@@ -23,34 +23,7 @@ object NetworkModule {
     private const val OLLAMA_URL = "http://192.168.1.92:11434/"
     // Kokoro base url
     // This is provided from ngrok. Replace with the one provided each time.
-    private const val KOKORO_URL   = "https://1589-34-16-164-255.ngrok-free.app/"
-
-//    @Provides
-//    @Singleton
-//    fun provideRetrofit(): Retrofit {
-//        val okHttpClient = OkHttpClient.Builder()
-//            .connectTimeout(60, TimeUnit.SECONDS)
-//            .readTimeout(60, TimeUnit.SECONDS)
-//            .writeTimeout(60, TimeUnit.SECONDS)
-//            .build()
-//
-//        return Retrofit.Builder()
-//            .baseUrl(OLLAMA_URL)
-//            .client(okHttpClient)
-//            .addConverterFactory(GsonConverterFactory.create())
-//            .build()
-//    }
-//
-//    // Use for non streaming.
-//    @Provides
-//    @Singleton
-//    fun provideApiService(retrofit: Retrofit): ApiService =
-//        retrofit.create(ApiService::class.java)
-
-    /*@Provides
-    @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiStreamingService =
-        retrofit.create(ApiStreamingService::class.java)*/
+    private const val KOKORO_URL   = "https://20ea-34-74-249-135.ngrok-free.app/"
 
     @Named("ollama")
     @Provides
