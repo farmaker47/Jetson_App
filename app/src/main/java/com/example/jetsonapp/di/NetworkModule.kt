@@ -18,7 +18,7 @@ object NetworkModule {
 
     // Kokoro base url
     // This is provided from ngrok. Replace with the one provided each time.
-    private const val KOKORO_URL   = "https://e791-104-199-127-176.ngrok-free.app/"
+    private const val KOKORO_URL   = "https://c2ef-104-199-127-176.ngrok-free.app/"
 
     @Named("kokoro")
     @Provides
