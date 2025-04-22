@@ -13,13 +13,14 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+import kotlin.math.min
 
 class WhisperEngine(private val context: Context) : IWhisperEngine {
     private val TAG = "WhisperEngineJava"
     private val mWhisperUtil = WhisperUtil()
     override var isInitialized = false
         private set
-    private var mInterpreter: Interpreter? = null
+    private var interpreter: Interpreter? = null
     private val nativePtr // Native pointer to the TFLiteEngine instance
             : Long
 
@@ -76,7 +77,7 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         tfliteOptions.setUseXNNPACK(true)
         tfliteOptions.setNumThreads(7)
 
-        mInterpreter = Interpreter(retFile, tfliteOptions)
+        interpreter = Interpreter(retFile, tfliteOptions)
     }
 
     private fun getMelSpectrogram(wavePath: String?): FloatArray {
@@ -86,7 +87,7 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         Log.v("inference_get_samples", (System.currentTimeMillis() - time).toString())
         val fixedInputSize = WhisperUtil.WHISPER_SAMPLE_RATE * WhisperUtil.WHISPER_CHUNK_SIZE
         val inputSamples = FloatArray(fixedInputSize)
-        val copyLength = Math.min(samples.size, fixedInputSize)
+        val copyLength = min(samples.size, fixedInputSize)
         System.arraycopy(samples, 0, inputSamples, 0, copyLength)
         val time2 = System.currentTimeMillis()
         val value = transcribeFileWithMel(nativePtr, wavePath, mWhisperUtil.getFilters())
@@ -96,13 +97,13 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
     private fun runInference(inputData: FloatArray): String {
         // Create input tensor
-        val inputTensor = mInterpreter!!.getInputTensor(0)
+        val inputTensor = interpreter!!.getInputTensor(0)
         val inputBuffer = TensorBuffer.createFixedSize(inputTensor.shape(), inputTensor.dataType())
         Log.d(TAG, "Input Tensor Dump ===>")
         printTensorDump(inputTensor)
 
         // Create output tensor
-        val outputTensor = mInterpreter!!.getOutputTensor(0)
+        val outputTensor = interpreter!!.getOutputTensor(0)
         val outputBuffer = TensorBuffer.createFixedSize(outputTensor.shape(), DataType.FLOAT32)
         Log.d(TAG, "Output Tensor Dump ===>")
         printTensorDump(outputTensor)
@@ -119,7 +120,7 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         inputBuffer.loadBuffer(inputBuf)
 
         // Run inference
-        mInterpreter!!.run(inputBuffer.buffer, outputBuffer.buffer)
+        interpreter!!.run(inputBuffer.buffer, outputBuffer.buffer)
 
         // Retrieve the results
         val outputLen = outputBuffer.intArray.size
