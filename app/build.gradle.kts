@@ -81,4 +81,6 @@ dependencies {
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
 
+    implementation(libs.accompanist.permissions)
+
 }
