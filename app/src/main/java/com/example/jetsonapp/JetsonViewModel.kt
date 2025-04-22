@@ -15,14 +15,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
-import com.example.jetsonapp.internet.GenerateStreamResponse
-import com.example.jetsonapp.internet.KokoroRequest
 import com.example.jetsonapp.internet.KokoroService
-import com.example.jetsonapp.internet.OllamaService
 import com.example.jetsonapp.recorder.Recorder
 import com.example.jetsonapp.whisperengine.IWhisperEngine
 import com.example.jetsonapp.whisperengine.WhisperEngine
-import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
-import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -39,7 +34,6 @@ import java.io.IOException
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
     application: Application,
-    private val ollamaService: OllamaService,
     private val kokoroService: KokoroService
 ) :
     AndroidViewModel(application) {
@@ -89,11 +83,10 @@ class JetsonViewModel @javax.inject.Inject constructor(
             viewModelScope.launch(Dispatchers.Default) {
                 // Offline speech to text
                 val transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
-
-
                 Log.v("transription", transcribedText)
 
-
+                updateUserPrompt(transcribedText)
+                sendData()
             }
         } catch (e: RuntimeException) {
             Log.e(TAG, e.toString())
@@ -121,43 +114,22 @@ class JetsonViewModel @javax.inject.Inject constructor(
             try {
                 val request = if (selectedImage.isEmpty()) {
                     GenerateRequest(
-                        model = MODEL,
                         prompt = userPrompt.value,
                         stream = false
                     )
                 } else {
                     GenerateImageRequest(
-                        model = MODEL,
                         prompt = userPrompt.value,
                         stream = false,
                         images = listOf(selectedImage)
                     )
                 }
-                val response = ollamaService.generate(request)
-                if (response.isSuccessful && response.body() != null) {
-                    // Use for non streaming
-                    val body = response.body()
-                    if (body != null) {
-                        updateServerResult(body.response)
-                        // Send text to kokoro service
-                        val kokoroRequest = KokoroRequest(
-                            prompt = body.response,
-                            voice = "af_heart"
-                        )
-                        val kokoroResponse = kokoroService.generate(kokoroRequest)
-                        if (kokoroResponse.isSuccessful && kokoroResponse.body() != null) {
-                            val uri = saveWavToDownloads(kokoroResponse.body()!!)
-                            playAudio(uri)
-                        } else {
-                            updateServerResult("Error: ${kokoroResponse.code()} - ${kokoroResponse.message()}")
-                        }
-                        Log.v("response_", body.response)
-                    } else {
-                        updateServerResult("No response body received.")
-                    }
-                    // processStream(response.body()!!)
+                val kokoroResponse = kokoroService.generate(request)
+                if (kokoroResponse.isSuccessful && kokoroResponse.body() != null) {
+                    val uri = saveWavToDownloads(kokoroResponse.body()!!)
+                    playAudio(uri)
                 } else {
-                    updateServerResult("Error: ${response.code()} - ${response.message()}")
+                    updateServerResult("Error: ${kokoroResponse.code()} - ${kokoroResponse.message()}")
                 }
             } catch (e: IOException) {
                 updateServerResult("Network error: ${e.message}")
@@ -166,21 +138,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
             } finally {
                 updateJetsonIsWorking(false)
                 // selectedImage = ""
-            }
-        }
-    }
-
-    private suspend fun processStream(responseBody: ResponseBody) {
-        // Wrap the byte stream with a BufferedReader.
-        responseBody.byteStream().bufferedReader().use { reader: BufferedReader ->
-            while (true) {
-                val line = reader.readLine() ?: break
-                // Update the Compose state on the main thread.
-                withContext(Dispatchers.Main) {
-                    Log.v("streaming_", line)
-                    _serverResult.value += JsonParser.parseResponse(line)
-                    updateJetsonIsWorking(false)
-                }
             }
         }
     }
@@ -280,23 +237,5 @@ class JetsonViewModel @javax.inject.Inject constructor(
             }
         }
         return file.absolutePath
-    }
-}
-
-object JsonParser {
-    private val gson = Gson()
-
-    /**
-     * Parses a JSON line into a GenerateStreamResponse object
-     * and returns the "response" field.
-     */
-    fun parseResponse(jsonLine: String): String {
-        return try {
-            val streamResponse = gson.fromJson(jsonLine, GenerateStreamResponse::class.java)
-            streamResponse.response
-        } catch (e: Exception) {
-            e.printStackTrace()
-            ""
-        }
     }
 }
