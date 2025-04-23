@@ -6,7 +6,6 @@ import com.example.jetsonapp.utils.WaveUtil.getSamples
 import com.example.jetsonapp.utils.WhisperUtil
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.Tensor
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import java.io.FileInputStream
 import java.io.IOException
@@ -24,6 +23,11 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
     private val nativePtr // Native pointer to the TFLiteEngine instance
             : Long
 
+    // Pre‑allocated direct buffers
+    private lateinit var inputBuffer: TensorBuffer
+    private lateinit var outputBuffer: TensorBuffer
+    private lateinit var inputBuf: ByteBuffer
+
     @Throws(IOException::class)
     override fun initialize(
         modelPath: String?,
@@ -32,33 +36,33 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
     ): Boolean {
         // Load model
         loadModel(modelPath)
-        Log.d(TAG, "Model is loaded...$modelPath")
+        // Log.d(TAG, "Model is loaded...$modelPath")
 
         // Load filters and vocab
         val ret = mWhisperUtil.loadFiltersAndVocab(multilingual, vocabPath!!)
         if (ret) {
             this.isInitialized = true
-            Log.d(TAG, "Filters and Vocab are loaded...$vocabPath")
+            // Log.d(TAG, "Filters and Vocab are loaded...$vocabPath")
         } else {
             this.isInitialized = false
-            Log.d(TAG, "Failed to load Filters and Vocab...")
+            // Log.d(TAG, "Failed to load Filters and Vocab...")
         }
         return this.isInitialized
     }
 
     override fun transcribeFile(wavePath: String?): String {
         // Calculate Mel spectrogram
-        Log.d(TAG, "Calculating Mel spectrogram...")
+        // Log.d(TAG, "Calculating Mel spectrogram...")
         val time = System.currentTimeMillis()
         val melSpectrogram = getMelSpectrogram(wavePath)
-        Log.d(TAG, "Mel spectrogram is calculated...!")
-        Log.v("time_mel", (System.currentTimeMillis() - time).toString())
+        // Log.d(TAG, "Mel spectrogram is calculated...!")
+        // Log.v("time_mel", (System.currentTimeMillis() - time).toString())
 
         // Perform inference
-        val time2 = System.currentTimeMillis()
+        // val time2 = System.currentTimeMillis()
         val result = runInference(melSpectrogram)
-        Log.d(TAG, "Inference is executed...!")
-        Log.v("time_interpreter", (System.currentTimeMillis() - time2).toString())
+        // Log.d(TAG, "Inference is executed...!")
+        Log.v("time_total_transcribe", (System.currentTimeMillis() - time).toString())
         return result
     }
 
@@ -78,45 +82,45 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         tfliteOptions.setNumThreads(7)
 
         interpreter = Interpreter(retFile, tfliteOptions)
+
+        // Also create input and output buffers
+        val inTensor  = interpreter!!.getInputTensor(0)
+        val outTensor = interpreter!!.getOutputTensor(0)
+        /*check(outTensor.dataType() == DataType.INT32) {
+            "Whisper model output must be INT32"
+        }*/
+
+        inputBuffer = TensorBuffer.createFixedSize(inTensor.shape(), inTensor.dataType())
+        outputBuffer = TensorBuffer.createFixedSize(outTensor.shape(), DataType.FLOAT32)
+        val inputSize =
+            inTensor.shape()[0] * inTensor.shape()[1] * inTensor.shape()[2] * java.lang.Float.BYTES
+        inputBuf = ByteBuffer.allocateDirect(inputSize)
     }
 
     private fun getMelSpectrogram(wavePath: String?): FloatArray {
         // Get samples in PCM_FLOAT format
-        val time = System.currentTimeMillis()
+        // val time = System.currentTimeMillis()
         val samples = getSamples(wavePath)
-        Log.v("inference_get_samples", (System.currentTimeMillis() - time).toString())
+        // Log.v("inference_get_samples", (System.currentTimeMillis() - time).toString())
         val fixedInputSize = WhisperUtil.WHISPER_SAMPLE_RATE * WhisperUtil.WHISPER_CHUNK_SIZE
         val inputSamples = FloatArray(fixedInputSize)
         val copyLength = min(samples.size, fixedInputSize)
         System.arraycopy(samples, 0, inputSamples, 0, copyLength)
-        val time2 = System.currentTimeMillis()
+        // val time2 = System.currentTimeMillis()
+
         val value = transcribeFileWithMel(nativePtr, wavePath, mWhisperUtil.getFilters())
-        Log.v("inference_get_mel", (System.currentTimeMillis() - time2).toString())
+        // Log.v("inference_get_mel", (System.currentTimeMillis() - time2).toString())
         return value
     }
 
     private fun runInference(inputData: FloatArray): String {
-        // Create input tensor
-        val inputTensor = interpreter!!.getInputTensor(0)
-        val inputBuffer = TensorBuffer.createFixedSize(inputTensor.shape(), inputTensor.dataType())
-        Log.d(TAG, "Input Tensor Dump ===>")
-        printTensorDump(inputTensor)
 
-        // Create output tensor
-        val outputTensor = interpreter!!.getOutputTensor(0)
-        val outputBuffer = TensorBuffer.createFixedSize(outputTensor.shape(), DataType.FLOAT32)
-        Log.d(TAG, "Output Tensor Dump ===>")
-        printTensorDump(outputTensor)
+        outputBuffer.buffer.rewind()
 
-        // Load input data
-        val inputSize =
-            inputTensor.shape()[0] * inputTensor.shape()[1] * inputTensor.shape()[2] * java.lang.Float.BYTES
-        val inputBuf = ByteBuffer.allocateDirect(inputSize)
         inputBuf.order(ByteOrder.nativeOrder())
         for (input in inputData) {
             inputBuf.putFloat(input)
         }
-
         inputBuffer.loadBuffer(inputBuf)
 
         // Run inference
@@ -124,9 +128,9 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
         // Retrieve the results
         val outputLen = outputBuffer.intArray.size
-        Log.d(TAG, "output_len: $outputLen")
+        // Log.d(TAG, "output_len: $outputLen")
         val result = StringBuilder()
-        val time = System.currentTimeMillis()
+        // val time = System.currentTimeMillis()
         for (i in 0 until outputLen) {
             val token = outputBuffer.buffer.getInt()
             if (token == mWhisperUtil.tokenEOT) break
@@ -134,20 +138,20 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
             // Get word for token and Skip additional token
             if (token < mWhisperUtil.tokenEOT) {
                 val word = mWhisperUtil.getWordFromToken(token)
-                Log.d(TAG, "Adding token: $token, word: $word")
+                // Log.d(TAG, "Adding token: $token, word: $word")
                 result.append(word)
             } else {
-                if (token == mWhisperUtil.tokenTranscribe) Log.d(TAG, "It is Transcription...")
-                if (token == mWhisperUtil.tokenTranslate) Log.d(TAG, "It is Translation...")
-                val word = mWhisperUtil.getWordFromToken(token)
-                Log.d(TAG, "Skipping token: $token, word: $word")
+                // if (token == mWhisperUtil.tokenTranscribe) Log.d(TAG, "It is Transcription...")
+                // if (token == mWhisperUtil.tokenTranslate) Log.d(TAG, "It is Translation...")
+                // val word = mWhisperUtil.getWordFromToken(token)
+                // Log.d(TAG, "Skipping token: $token, word: $word")
             }
         }
-        Log.v("inference_time_decode", (System.currentTimeMillis() - time).toString())
+        // Log.v("inference_time_decode", (System.currentTimeMillis() - time).toString())
         return result.toString()
     }
 
-    private fun printTensorDump(tensor: Tensor) {
+    /*private fun printTensorDump(tensor: Tensor) {
         Log.d(TAG, "  shape.length: " + tensor.shape().size)
         for (i in tensor.shape().indices) Log.d(TAG, "    shape[" + i + "]: " + tensor.shape()[i])
         Log.d(TAG, "  dataType: " + tensor.dataType())
@@ -160,7 +164,7 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         Log.d(TAG, "  quantizationParams.getScale: " + tensor.quantizationParams().scale)
         Log.d(TAG, "  quantizationParams.getZeroPoint: " + tensor.quantizationParams().zeroPoint)
         Log.d(TAG, "==================================================================")
-    }
+    }*/
 
     init {
         nativePtr = createEngine()
