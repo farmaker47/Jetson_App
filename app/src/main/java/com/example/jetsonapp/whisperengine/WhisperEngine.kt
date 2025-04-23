@@ -94,18 +94,18 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         outputBuffer = TensorBuffer.createFixedSize(outTensor.shape(), DataType.FLOAT32)
         val inputSize =
             inTensor.shape()[0] * inTensor.shape()[1] * inTensor.shape()[2] * java.lang.Float.BYTES
-        inputBuf = ByteBuffer.allocateDirect(inputSize)
+        inputBuf = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
     }
 
     private fun getMelSpectrogram(wavePath: String?): FloatArray {
         // Get samples in PCM_FLOAT format
         // val time = System.currentTimeMillis()
-        val samples = getSamples(wavePath)
+        /*val samples = getSamples(wavePath)
         // Log.v("inference_get_samples", (System.currentTimeMillis() - time).toString())
         val fixedInputSize = WhisperUtil.WHISPER_SAMPLE_RATE * WhisperUtil.WHISPER_CHUNK_SIZE
         val inputSamples = FloatArray(fixedInputSize)
         val copyLength = min(samples.size, fixedInputSize)
-        System.arraycopy(samples, 0, inputSamples, 0, copyLength)
+        System.arraycopy(samples, 0, inputSamples, 0, copyLength)*/
         // val time2 = System.currentTimeMillis()
 
         val value = transcribeFileWithMel(nativePtr, wavePath, mWhisperUtil.getFilters())
@@ -117,7 +117,6 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
         outputBuffer.buffer.rewind()
 
-        inputBuf.order(ByteOrder.nativeOrder())
         for (input in inputData) {
             inputBuf.putFloat(input)
         }
