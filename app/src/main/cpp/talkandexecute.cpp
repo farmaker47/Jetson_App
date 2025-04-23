@@ -23,16 +23,16 @@ talkandexecute::returnMelSpectrogram(std::vector<float> samples, std::vector<flo
     // Hack if the audio file size is less than 30ms append with 0's
     samples.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
     const auto processor_count = std::thread::hardware_concurrency();
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "before");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "before");
 
     log_mel_spectrogramJava(samples.data(), samples.size(), WHISPER_SAMPLE_RATE, WHISPER_N_FFT,
                             WHISPER_HOP_LENGTH, WHISPER_N_MEL, processor_count, filtersJava, mel);
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "after");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "after");
 
     gettimeofday(&end_time, NULL);
     std::cout << "Time taken for Spectrogram: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
     // target_link_libraries(audioEngine log) AT CMAKELIST.txt
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "Time taken for Spectrogram: %ld ms", TIME_DIFF_MS(start_time, end_time));
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "Time taken for Spectrogram: %ld ms", TIME_DIFF_MS(start_time, end_time));
 
     return mel.data;
 }
@@ -40,11 +40,11 @@ talkandexecute::returnMelSpectrogram(std::vector<float> samples, std::vector<flo
 std::vector<float>
 talkandexecute::transcribeFileWithMel(const char *waveFile, std::vector<float> filtersJava) {
     std::vector<float> pcmf32 = readWAVFile(waveFile);
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "wav");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "wav");
 
     pcmf32.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "resize");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "resize");
     std::vector<float> mel_spectrogram = returnMelSpectrogram(pcmf32, filtersJava);
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "mel-end");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "mel-end");
     return mel_spectrogram;
 }
