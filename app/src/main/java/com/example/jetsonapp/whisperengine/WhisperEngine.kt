@@ -2,7 +2,6 @@ package com.example.jetsonapp.whisperengine
 
 import android.content.Context
 import android.util.Log
-import com.example.jetsonapp.utils.WaveUtil.getSamples
 import com.example.jetsonapp.utils.WhisperUtil
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -12,10 +11,8 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
-import kotlin.math.min
 
 class WhisperEngine(private val context: Context) : IWhisperEngine {
-    private val TAG = "WhisperEngineJava"
     private val mWhisperUtil = WhisperUtil()
     override var isInitialized = false
         private set

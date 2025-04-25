@@ -228,7 +228,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             Button(onClick = {
                 jetsonViewModel.updateUserPrompt(typedInput)
                 jetsonViewModel.updateServerResult("")
-                jetsonViewModel.sendData()
                 focusManager.clearFocus(true)
                 focusRequester.freeFocus()
             }) {

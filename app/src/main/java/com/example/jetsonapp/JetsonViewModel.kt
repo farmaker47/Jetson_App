@@ -24,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.ResponseBody
 import java.io.File
 import java.io.FileOutputStream
@@ -69,7 +68,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     init {
         whisperEngine.initialize(MODEL_PATH, getAssetFilePath(context = context), false)
-        recorder.setFilePath(getFilePath(context = context) )
+        recorder.setFilePath(getFilePath(context = context))
     }
 
     fun startRecordingWav() {
@@ -107,78 +106,77 @@ class JetsonViewModel @javax.inject.Inject constructor(
         }
     }
 
-    fun sendData() {
+    private suspend fun sendData() {
         updateJetsonIsWorking(true)
         // For streaming purposes IO dispatcher is preferred
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val request = if (selectedImage.isEmpty()) {
-                    GenerateRequest(
-                        prompt = userPrompt.value + TWENTY_WORDS,
-                        stream = false
-                    )
-                } else {
-                    GenerateImageRequest(
-                        prompt = userPrompt.value + TWENTY_WORDS,
-                        stream = false,
-                        images = listOf(selectedImage)
-                    )
-                }
-                val kokoroResponse = kokoroService.generate(request)
-                if (kokoroResponse.isSuccessful && kokoroResponse.body() != null) {
-                    val uri = saveWavToDownloads(kokoroResponse.body()!!)
-                    playAudio(uri)
-                } else {
-                    updateServerResult("Error: ${kokoroResponse.code()} - ${kokoroResponse.message()}")
-                }
-            } catch (e: IOException) {
-                updateServerResult("Network error: ${e.message}")
-            } catch (e: Exception) {
-                updateServerResult("Unexpected error: ${e.message}")
-            } finally {
-                updateJetsonIsWorking(false)
-                // selectedImage = ""
+        val time = System.currentTimeMillis()
+        try {
+            val request = if (selectedImage.isEmpty()) {
+                GenerateRequest(
+                    prompt = userPrompt.value + TWENTY_WORDS,
+                    stream = false
+                )
+            } else {
+                GenerateImageRequest(
+                    prompt = userPrompt.value + TWENTY_WORDS,
+                    stream = false,
+                    images = listOf(selectedImage)
+                )
             }
+            val kokoroResponse = kokoroService.generate(request)
+            if (kokoroResponse.isSuccessful && kokoroResponse.body() != null) {
+                Log.v("time_total_describe", (System.currentTimeMillis() - time).toString())
+                val uri = saveWavToDownloads(kokoroResponse.body()!!)
+                playAudio(uri)
+            } else {
+                updateServerResult("Error: ${kokoroResponse.code()} - ${kokoroResponse.message()}")
+            }
+        } catch (e: IOException) {
+            updateServerResult("Network error: ${e.message}")
+        } catch (e: Exception) {
+            updateServerResult("Unexpected error: ${e.message}")
+        } finally {
+            updateJetsonIsWorking(false)
+            // selectedImage = ""
         }
+
     }
 
     /** Streams the WAV bytes into Downloads and returns the URI. */
-    private suspend fun saveWavToDownloads(body: ResponseBody): Uri =
-        withContext(Dispatchers.IO) {
-            val fileName = "generated_${System.currentTimeMillis()}.wav"
+    private fun saveWavToDownloads(body: ResponseBody): Uri {
+        val fileName = "generated_${System.currentTimeMillis()}.mp3"
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // MediaStore on Android 10+
-                val resolver = context.contentResolver
-                val cv = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                    put(MediaStore.Downloads.MIME_TYPE, "audio/wav")
-                }
-                val uri = resolver
-                    .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
-                    ?: throw IOException("Failed to create MediaStore record")
-                resolver.openOutputStream(uri)!!.use { out ->
-                    body.byteStream().copyTo(out)
-                }
-                uri
-            } else {
-                // Legacy path on < Android 10
-                val downloads = File(
-                    Environment.getExternalStorageDirectory(),
-                    Environment.DIRECTORY_DOWNLOADS
-                ).apply { if (!exists()) mkdirs() }
-                val outFile = File(downloads, fileName)
-                FileOutputStream(outFile).use { out ->
-                    body.byteStream().copyTo(out)
-                }
-                Uri.fromFile(outFile)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // MediaStore on Android 10+
+            val resolver = context.contentResolver
+            val cv = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                put(MediaStore.Downloads.MIME_TYPE, "audio/mp3")
             }
+            val uri = resolver
+                .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
+                ?: throw IOException("Failed to create MediaStore record")
+            resolver.openOutputStream(uri)!!.use { out ->
+                body.byteStream().copyTo(out)
+            }
+            uri
+        } else {
+            // Legacy path on < Android 10
+            val downloads = File(
+                Environment.getExternalStorageDirectory(),
+                Environment.DIRECTORY_DOWNLOADS
+            ).apply { if (!exists()) mkdirs() }
+            val outFile = File(downloads, fileName)
+            FileOutputStream(outFile).use { out ->
+                body.byteStream().copyTo(out)
+            }
+            Uri.fromFile(outFile)
         }
+    }
 
     /** Sets up MediaPlayer, prepares async and starts playback when ready. */
     private fun playAudio(uri: Uri) {
-        // release any old player
-        mediaPlayer?.release()
+        stopAudio()
 
         mediaPlayer = MediaPlayer().apply {
             setAudioAttributes(
@@ -187,18 +185,24 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     .build()
             )
             setDataSource(context, uri)
-            setOnPreparedListener { mp -> mp.start() }
-            setOnCompletionListener { mp ->
-                mp.release()
-                mediaPlayer = null
-            }
-            setOnErrorListener { mp, what, extra ->
-                mp.release()
-                mediaPlayer = null
-                true
-            }
-            prepareAsync()
+            prepare()
+            start()
         }
+    }
+
+    private fun stopAudio() {
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.stop()
+                it.reset()
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
 
     companion object {
