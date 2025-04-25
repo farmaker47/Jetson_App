@@ -15,6 +15,7 @@ gson = "2.10.1"
 tensorflowLite = "2.9.0"
 tensorflowLiteSupport = "0.4.3"
 accompanistPermissions = "0.30.1"
+coilBom = "3.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,6 +41,10 @@ converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", ve
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 tensorflow-lite = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tensorflowLite" }
 tensorflow-lite-support = { group = "org.tensorflow", name = "tensorflow-lite-support", version.ref = "tensorflowLiteSupport" }
+coil-bom = { group = "io.coil-kt.coil3", name = "coil-bom", version.ref = "coilBom" }
+coil = { group = "io.coil-kt.coil3", name = "coil" }
+coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

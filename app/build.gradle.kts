@@ -83,4 +83,8 @@ dependencies {
 
     implementation(libs.accompanist.permissions)
 
+    implementation(platform(libs.coil.bom))
+    implementation(libs.coil)
+    implementation(libs.coil.okhttp)
+    implementation(libs.coil.compose)
 }
