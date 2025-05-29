@@ -80,6 +80,8 @@ dependencies {
 
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
+    implementation(libs.mediapipe.tasks.genai)
+    implementation(libs.ai.edge.localagents.fc)
 
     implementation(libs.accompanist.permissions)
 

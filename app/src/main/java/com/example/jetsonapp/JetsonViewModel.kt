@@ -17,8 +17,20 @@ import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.KokoroService
 import com.example.jetsonapp.recorder.Recorder
+import com.example.jetsonapp.utils.CameraUtil.extractFunctionName
 import com.example.jetsonapp.whisperengine.IWhisperEngine
 import com.example.jetsonapp.whisperengine.WhisperEngine
+import com.google.ai.edge.localagents.core.proto.Content
+import com.google.ai.edge.localagents.core.proto.FunctionDeclaration
+import com.google.ai.edge.localagents.core.proto.Part
+import com.google.ai.edge.localagents.core.proto.Tool
+import com.google.ai.edge.localagents.fc.GenerativeModel
+import com.google.ai.edge.localagents.fc.HammerFormatter
+import com.google.ai.edge.localagents.fc.LlmInferenceBackend
+import com.google.ai.edge.localagents.fc.ModelFormatterOptions
+import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.google.mediapipe.tasks.genai.llminference.LlmInference.Backend
+import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +56,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private val outputFileWav = File(application.filesDir, RECORDING_FILE_WAV)
     private val _userPrompt = MutableStateFlow("")
     private val userPrompt = _userPrompt.asStateFlow()
-    fun updateUserPrompt(newValue: String) {
+    private fun updateUserPrompt(newValue: String) {
         _userPrompt.value = newValue
     }
 
@@ -79,18 +91,113 @@ class JetsonViewModel @javax.inject.Inject constructor(
         recorder.stop()
 
         try {
-            viewModelScope.launch(Dispatchers.Default) {
+            viewModelScope.launch(Dispatchers.IO) {
                 // Offline speech to text
                 val transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
                 Log.v("transription", transcribedText)
 
                 updateUserPrompt(transcribedText)
-                sendData()
+                // sendData()
+
+                // Example from the Google's function calling app
+                // https://github.com/google-ai-edge/ai-edge-apis/tree/main/examples/function_calling/healthcare_form_demo
+                // Conversion instructions
+                // https://github.com/google-ai-edge/ai-edge-torch/tree/main/ai_edge_torch/generative/examples
+                // Speech recognition example
+                // https://medium.com/@andraz.pajtler/android-speech-to-text-the-missing-guide-part-1-824e2636c45a
+//                try {
+//                    val chat = generativeModel.startChat()
+//                    val response = chat.sendMessage(transcribedText)
+//                    Log.d(TAG, "Hammer Response: $response") // Log response
+//
+//                    response.getCandidates(0).content.partsList?.let { parts ->
+//                        try {
+//                            // extract the function from all the parts in the response
+//                            parts.forEach { part ->
+//                                part?.functionCall?.args?.fieldsMap?.forEach { (key, value) ->
+//                                    value.stringValue?.let { stringValue ->
+//                                        if (stringValue != "<unknown>") {
+//                                            when (key) {
+//                                                "getCameraImage" -> {
+//                                                    Log.v("else_if_function", "getCameraImage")
+//                                                }
+//
+//                                                else -> {
+//                                                    throw Exception("Unknown function: $key value: $value")
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        } catch (e: JSONException) {
+//                            Log.e(TAG, "JSON Parsing Error: ${e.message}")
+//                        } finally {
+//                            Log.d(TAG, "STOP PROCESSING")
+//                        }
+//                    } ?: run {
+//                        Log.e(TAG, "Model response was null")
+//                    }
+//                } catch (e: Exception) {
+//                    Log.e(TAG, "Model Error: ${e.message}", e)
+//                    val errorMessage = if (e is IndexOutOfBoundsException) {
+//                        "The model returned no response to \"$transcribedText\"."
+//                    } else {
+//                        e.localizedMessage
+//                    }
+//                } finally {
+//                    Log.i(TAG, "Model processing ended")
+//                }
+
+                // Extract the model's message from the response.
+                val chat = generativeModel.startChat()
+                val response = chat.sendMessage(transcribedText)
+                Log.v("else_if_function", "Model response: $response")
+
+                if (response.candidatesCount > 0 && response.getCandidates(0).content.partsList.size > 0) {
+                    val message = response.getCandidates(0).content.getParts(0)
+
+                    // If the message contains a function call, execute the function.
+                    if (message.hasFunctionCall()) {
+                        val functionCall = message.functionCall
+                        // val args = functionCall.args.fieldsMap
+                        // var result = null
+
+                        // Call the appropriate function.
+                        when (functionCall.name) {
+                            "getCameraImage" -> {
+                                Log.v("else_if_function", "getCameraImage")
+                            }
+
+                            else -> throw Exception("Function does not exist:" + functionCall.name)
+                        }
+                        // Return the result of the function call to the model.
+                        /*val functionResponse =
+                            FunctionResponse.newBuilder()
+                                .setName(functionCall.getName())
+                                .setResponse(
+                                    Struct.newBuilder()
+                                        .putFields(
+                                            "result",
+                                            Value.newBuilder().setStringValue(result).build()
+                                        )
+                                )
+                                .build()
+                        val response = chat.sendMessage(functionResponse)*/
+                    } else if (message.hasText()) {
+                        Log.v("else_if", message.text)
+                        Log.v("else_if", extractFunctionName(message.text) ?: "no function")
+                    }
+                } else {
+                    Log.v("else_if", "no parts")
+                }
             }
         } catch (e: RuntimeException) {
             Log.e(TAG, e.toString())
         } catch (e: IllegalStateException) {
             Log.e(TAG, e.toString())
+        } catch (e: Exception) {
+            Log.e(TAG, "Model Error: ${e.message}", e)
         }
     }
 
@@ -104,6 +211,47 @@ class JetsonViewModel @javax.inject.Inject constructor(
         } catch (e: Exception) {
             ""
         }
+    }
+
+    private val generativeModel by lazy { createGenerativeModel() }
+
+    private fun createGenerativeModel(): GenerativeModel {
+        val getCameraImage = FunctionDeclaration.newBuilder()
+            .setName("getCameraImage")
+            .setDescription("Function to open the camera")
+            .build()
+        val tool = Tool.newBuilder()
+            .addFunctionDeclarations(getCameraImage)
+            .build()
+
+        val formatter =
+            HammerFormatter(ModelFormatterOptions.builder().setAddPromptTemplate(true).build())
+
+        val llmInferenceOptions = LlmInferenceOptions.builder()
+            .setModelPath("/data/local/tmp/hammer2.1_1.5b_q8_ekv4096.task") // hammer2.1_1.5b_q8_ekv4096.task or gemma-3n-E2B-it-int4.task
+            .setMaxTokens(2048)                                             // SmolLM-135M-Instruct_multi-prefill-seq_q8_ekv1280.task
+            .apply { setPreferredBackend(Backend.GPU) }
+            .build()
+
+        val llmInference =
+            LlmInference.createFromOptions(context, llmInferenceOptions)
+        val llmInferenceBackend =
+            LlmInferenceBackend(llmInference, formatter)
+
+        val systemInstruction = Content.newBuilder()
+            .setRole("system")
+            .addParts(
+                Part.newBuilder()
+                    .setText("This assistant will help you to open the camera")
+            )
+            .build()
+
+        val model = GenerativeModel(
+            llmInferenceBackend,
+            systemInstruction,
+            listOf(tool).toMutableList()
+        )
+        return model
     }
 
     private suspend fun sendData() {

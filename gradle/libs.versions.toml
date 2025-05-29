@@ -16,6 +16,8 @@ tensorflowLite = "2.9.0"
 tensorflowLiteSupport = "0.4.3"
 accompanistPermissions = "0.30.1"
 coilBom = "3.1.0"
+tasksGenai = "0.10.24"
+localagentsFc = "0.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
