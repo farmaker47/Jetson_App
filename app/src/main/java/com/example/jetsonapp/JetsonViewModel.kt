@@ -3,6 +3,7 @@ package com.example.jetsonapp
 import android.app.Application
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
@@ -13,6 +14,7 @@ import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import android.graphics.BitmapFactory
 import com.example.jetsonapp.internet.GenerateImageRequest
 import com.example.jetsonapp.internet.GenerateRequest
 import com.example.jetsonapp.internet.KokoroService
@@ -37,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.ResponseBody
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -76,6 +79,12 @@ class JetsonViewModel @javax.inject.Inject constructor(
     val microphoneIsRecording = _microphoneIsRecording.asStateFlow()
     fun updateMicrophoneIsRecording(newValue: Boolean) {
         _microphoneIsRecording.value = newValue
+    }
+
+    private val _cameraFunctionTriggered = MutableStateFlow(false)
+    val cameraFunctionTriggered = _cameraFunctionTriggered.asStateFlow()
+    fun updateCameraFunctionTriggered(newValue: Boolean) {
+        _cameraFunctionTriggered.value = newValue
     }
 
     init {
@@ -119,7 +128,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
 //                                        if (stringValue != "<unknown>") {
 //                                            when (key) {
 //                                                "getCameraImage" -> {
-//                                                    Log.v("else_if_function", "getCameraImage")
+//                                                    Log.v("function", "getCameraImage")
 //                                                }
 //
 //                                                else -> {
@@ -152,7 +161,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 // Extract the model's message from the response.
                 val chat = generativeModel.startChat()
                 val response = chat.sendMessage(transcribedText)
-                Log.v("else_if_function", "Model response: $response")
+                Log.v("function", "Model response: $response")
 
                 if (response.candidatesCount > 0 && response.getCandidates(0).content.partsList.size > 0) {
                     val message = response.getCandidates(0).content.getParts(0)
@@ -166,10 +175,14 @@ class JetsonViewModel @javax.inject.Inject constructor(
                         // Call the appropriate function.
                         when (functionCall.name) {
                             "getCameraImage" -> {
-                                Log.v("else_if_function", "getCameraImage")
+                                Log.v("function", "getCameraImage")
+                                _cameraFunctionTriggered.value = true
                             }
 
-                            else -> throw Exception("Function does not exist:" + functionCall.name)
+                            else -> {
+                                Log.v("function", "getCameraImage")
+                                throw Exception("Function does not exist:" + functionCall.name)
+                            }
                         }
                         // Return the result of the function call to the model.
                         /*val functionResponse =
@@ -185,11 +198,14 @@ class JetsonViewModel @javax.inject.Inject constructor(
                                 .build()
                         val response = chat.sendMessage(functionResponse)*/
                     } else if (message.hasText()) {
-                        Log.v("else_if", message.text)
-                        Log.v("else_if", extractFunctionName(message.text) ?: "no function")
+                        Log.v("function_else_if", message.text)
+                        Log.v(
+                            "function_else_if",
+                            extractFunctionName(message.text) ?: "no function"
+                        )
                     }
                 } else {
-                    Log.v("else_if", "no parts")
+                    Log.v("function_else_if", "no parts")
                 }
             }
         } catch (e: RuntimeException) {
@@ -202,16 +218,46 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     private var selectedImage = ""
+
     fun updateSelectedImage(context: Context, uri: Uri) {
         selectedImage = try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
+            val contentResolver = context.contentResolver
+
+            // Convert Uri to Base64 string
+            val base64 = contentResolver.openInputStream(uri)?.use { stream ->
                 val bytes = stream.readBytes()
                 Base64.encodeToString(bytes, Base64.NO_WRAP)
             } ?: ""
+
+            // Create a bitmap from the Uri and log its width and height
+            contentResolver.openInputStream(uri)?.use { bmpStream ->
+                val bitmap = BitmapFactory.decodeStream(bmpStream)
+                bitmap?.let {
+                    Log.d("ImageInfo", "Bitmap width: ${it.width}, height: ${it.height}")
+                }
+            }
+
+            base64
+        } catch (e: Exception) {
+            Log.e("ImageUtils", "Error processing image", e)
+            ""
+        }
+    }
+
+    fun convertBitmapToBase64(bitmap: Bitmap) {
+        selectedImage =  try {
+            val outputStream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            bitmap.let {
+                Log.d("ImageInfo", "Bitmap width: ${it.width}, height: ${it.height}")
+            }
+            val bytes = outputStream.toByteArray()
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
         } catch (e: Exception) {
             ""
         }
     }
+
 
     private val generativeModel by lazy { createGenerativeModel() }
 
