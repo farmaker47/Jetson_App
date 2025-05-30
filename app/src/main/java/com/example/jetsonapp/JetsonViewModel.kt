@@ -91,11 +91,12 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private lateinit var session: LlmInferenceSession
 
     fun initialize() {
+        updateJetsonIsWorking(true)
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
             generativeModel = createGenerativeModel()
             session = createSession(context)
-            Log.v("init_", "initialized")
+            updateJetsonIsWorking(false)
         }
     }
 

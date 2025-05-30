@@ -26,7 +26,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -83,6 +85,7 @@ import com.example.jetsonapp.utils.CameraUtil.createTempPictureUri
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import androidx.core.graphics.createBitmap
+import kotlinx.coroutines.delay
 
 @OptIn(
     ExperimentalPermissionsApi::class,
@@ -138,7 +141,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 //                jetsonViewModel.updateSelectedImage(context, tempPhotoUri)
 //                imageUri = tempPhotoUri
 //            }
-             showCameraCaptureBottomSheet = true
+            showCameraCaptureBottomSheet = true
         }
     }
 
@@ -215,15 +218,17 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(top = 16.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.Center,
     ) {
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
             ImageFromUri(imageUri, capturedBitmap)
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
@@ -231,13 +236,25 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 .align(Alignment.CenterHorizontally)
         ) {
             if (jetsonIsWorking) {
-                CircularProgressIndicator(
-                    color = Color.Black
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Loading the models",
+                        color = Color.Black,
+                        fontSize = 24.sp,
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator(
+                        color = Color.Black
+                    )
+                }
+
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(42.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -308,7 +325,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 //                }
 //            }
 
-            Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Image(
                 painter = painterResource(id = R.drawable.baseline_mic_24),
@@ -340,19 +357,25 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             )
         }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            modifier = Modifier.fillMaxWidth(),
-            text = vlmResult,
-            color = Color.Black,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 32.sp,
-            textAlign = TextAlign.Center,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = vlmResult,
+                color = Color.Black,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 32.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(80.dp))
     }
 
     if (showCameraCaptureBottomSheet) {
@@ -489,8 +512,11 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 
                                     imageUri = "".toUri()
                                     capturedBitmap = bitmap
-                                    jetsonViewModel.convertBitmapToBase64(bitmap)
-                                    jetsonViewModel.updateCameraFunctionTriggered(false)
+                                    scope.launch {
+                                        delay(1000)
+                                        jetsonViewModel.convertBitmapToBase64(bitmap)
+                                        jetsonViewModel.updateCameraFunctionTriggered(false)
+                                    }
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Failed to process image", e)
                                 } finally {
