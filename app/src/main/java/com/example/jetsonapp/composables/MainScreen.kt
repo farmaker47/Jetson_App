@@ -101,6 +101,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val jetsonIsWorking by jetsonViewModel.jetsonIsWorking.collectAsStateWithLifecycle()
     val microphoneIsRecording by jetsonViewModel.microphoneIsRecording.collectAsStateWithLifecycle()
     val cameraFunctionTriggered by jetsonViewModel.cameraFunctionTriggered.collectAsStateWithLifecycle()
+    val vlmResult by jetsonViewModel.vlmResult.collectAsStateWithLifecycle()
     var showCameraCaptureBottomSheet by remember { mutableStateOf(false) }
     val cameraCaptureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var tempPhotoUri by remember { mutableStateOf(value = Uri.EMPTY) }
@@ -121,6 +122,10 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 )*/
             }
         }
+
+    LaunchedEffect(Unit) {
+        jetsonViewModel.initialize()
+    }
 
     val takePicturePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -339,7 +344,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 
         Text(
             modifier = Modifier.fillMaxWidth(),
-            text = "Select an image then hold, speak and release",
+            text = vlmResult,
             color = Color.Black,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
@@ -485,6 +490,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                                     imageUri = "".toUri()
                                     capturedBitmap = bitmap
                                     jetsonViewModel.convertBitmapToBase64(bitmap)
+                                    jetsonViewModel.updateCameraFunctionTriggered(false)
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Failed to process image", e)
                                 } finally {

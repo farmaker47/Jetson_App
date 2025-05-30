@@ -1,25 +1,27 @@
 [versions]
-agp = "8.9.2"
-kotlin = "2.1.0"
-coreKtx = "1.16.0"
-junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.7"
+accompanistPermissions = "0.30.1"
 activityCompose = "1.10.1"
-composeBom = "2025.04.01"
+agp = "8.10.1"
+cameraX = "1.4.2"
+coilBom = "3.1.0"
+composeBom = "2025.05.01"
+coreKtx = "1.16.0"
+espressoCore = "3.6.1"
+gson = "2.12.1"
 hilt = "2.52"
 hilt-navigation-compose = "1.2.0"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+kotlin = "2.1.0"
+lifecycleRuntimeKtx = "2.9.0"
+localagentsFc = "0.1.0"
+materialIconExtended = "1.7.8"
+mediapipeTasksImageGenerator = "0.10.21"
+mediapipeTasksText = "0.10.21"
 retrofit = "2.11.0"
-gson = "2.10.1"
+tasksGenai = "0.10.24"
 tensorflowLite = "2.9.0"
 tensorflowLiteSupport = "0.4.3"
-accompanistPermissions = "0.30.1"
-coilBom = "3.1.0"
-tasksGenai = "0.10.24"
-localagentsFc = "0.1.0"
-cameraX = "1.4.2"
-materialIconExtended = "1.7.8"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +53,8 @@ coil = { group = "io.coil-kt.coil3", name = "coil" }
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose" }
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "tasksGenai" }
+mediapipe-tasks-text = { group = "com.google.mediapipe", name = "tasks-text", version.ref = "mediapipeTasksText" }
+mediapipe-tasks-imagegen = { group = "com.google.mediapipe", name = "tasks-vision-image-generator", version.ref = "mediapipeTasksImageGenerator" }
 ai-edge-localagents-fc = { group = "com.google.ai.edge.localagents", name = "localagents-fc", version.ref = "localagentsFc" }
 camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX"}
 camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX"}
