@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.jetsonapp.composables.MainScreen
 import com.example.jetsonapp.ui.theme.JetsonAppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -17,6 +18,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             JetsonAppTheme {
+                val jetsonViewModel: JetsonViewModel = hiltViewModel()
+                jetsonViewModel.initialize()
+
                 MainScreen()
             }
         }

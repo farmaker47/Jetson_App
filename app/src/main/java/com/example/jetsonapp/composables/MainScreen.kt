@@ -104,6 +104,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val jetsonIsWorking by jetsonViewModel.jetsonIsWorking.collectAsStateWithLifecycle()
     val microphoneIsRecording by jetsonViewModel.microphoneIsRecording.collectAsStateWithLifecycle()
     val cameraFunctionTriggered by jetsonViewModel.cameraFunctionTriggered.collectAsStateWithLifecycle()
+    val phoneGalleryTriggered by jetsonViewModel.phoneGalleryTriggered.collectAsStateWithLifecycle()
     val vlmResult by jetsonViewModel.vlmResult.collectAsStateWithLifecycle()
     var showCameraCaptureBottomSheet by remember { mutableStateOf(false) }
     val cameraCaptureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -126,10 +127,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             }
         }
 
-    LaunchedEffect(Unit) {
-        jetsonViewModel.initialize()
-    }
-
     val takePicturePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { permissionGranted ->
@@ -142,6 +139,34 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 //                imageUri = tempPhotoUri
 //            }
             showCameraCaptureBottomSheet = true
+        }
+    }
+
+    // https://developer.android.com/training/data-storage/shared/documents-files
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                scope.launch {
+                    delay(1000)
+                    jetsonViewModel.updateSelectedImage(context, uri)
+                    imageUri = uri
+                    jetsonViewModel.updatePhoneGalleryTriggered(false)
+                }
+            }
+        }
+
+    LaunchedEffect(phoneGalleryTriggered) {
+        if (phoneGalleryTriggered) {
+            imagePickerLauncher.launch(
+                arrayOf(
+                    "image/*"
+                    // "application/pdf"
+                    // "text/plain",
+                    // "application/msword",  // .doc
+                    // "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    // // .docx
+                )
+            )
         }
     }
 
@@ -205,15 +230,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             }
         }
     }
-
-    // https://developer.android.com/training/data-storage/shared/documents-files
-    val imagePickerLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-            uri?.let {
-                jetsonViewModel.updateSelectedImage(context, uri)
-                imageUri = uri
-            }
-        }
 
     Column(
         modifier = Modifier
@@ -365,7 +381,9 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 text = vlmResult,
                 color = Color.Black,
                 fontSize = 24.sp,
@@ -461,6 +479,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                         scope.launch {
                             cameraCaptureSheetState.hide()
                             showCameraCaptureBottomSheet = false
+                            jetsonViewModel.updateCameraFunctionTriggered(false)
                         }
                     }, colors = IconButtonDefaults.iconButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -515,7 +534,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                                     scope.launch {
                                         delay(1000)
                                         jetsonViewModel.convertBitmapToBase64(bitmap)
-                                        jetsonViewModel.updateCameraFunctionTriggered(false)
                                     }
                                 } catch (e: Exception) {
                                     Log.e("MainScreen", "Failed to process image", e)
@@ -524,6 +542,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                                     scope.launch {
                                         cameraCaptureSheetState.hide()
                                         showCameraCaptureBottomSheet = false
+                                        jetsonViewModel.updateCameraFunctionTriggered(false)
                                     }
                                 }
                             }
@@ -570,23 +589,9 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 }
 
 @Composable
-fun ImageFromUri(uri: Uri?) {
-    if (uri != null) {
-        Log.v("image_uri", uri.toString())
-        AsyncImage(
-            model = uri,
-            contentDescription = "Loaded image",
-            placeholder = painterResource(R.drawable.image_icon),
-            error = painterResource(R.drawable.image_icon),
-            modifier = Modifier.size(320.dp),
-        )
-    }
-}
-
-@Composable
 fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
     if (uri != null && uri != "".toUri() || bitmap.width == 1) {
-        Log.v("image_uri", uri.toString())
+        // Log.v("image_uri", uri.toString())
         AsyncImage(
             model = uri,
             contentDescription = "Loaded image",

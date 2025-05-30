@@ -87,6 +87,12 @@ class JetsonViewModel @javax.inject.Inject constructor(
         _cameraFunctionTriggered.value = newValue
     }
 
+    private val _phoneGalleryTriggered = MutableStateFlow(false)
+    val phoneGalleryTriggered = _phoneGalleryTriggered.asStateFlow()
+    fun updatePhoneGalleryTriggered(newValue: Boolean) {
+        _phoneGalleryTriggered.value = newValue
+    }
+
     private lateinit var generativeModel: GenerativeModel
     private lateinit var session: LlmInferenceSession
 
@@ -111,14 +117,15 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     fun stopRecordingWav() {
         recorder.stop()
+        updateVlmResult("")
 
         try {
             viewModelScope.launch(Dispatchers.IO) {
                 // Offline speech to text
                 val transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
-                Log.v("transription", transcribedText)
+                Log.v("transription", transcribedText.trim())
 
-                updateUserPrompt(transcribedText)
+                updateUserPrompt(transcribedText.trim())
                 // sendData()
 
                 // Example from the Google's function calling app
@@ -192,9 +199,14 @@ class JetsonViewModel @javax.inject.Inject constructor(
                                 _cameraFunctionTriggered.value = true
                             }
 
+                            "openPhoneGallery" -> {
+                                Log.v("function", "openPhoneGallery")
+                                _phoneGalleryTriggered.value = true
+                            }
+
                             else -> {
-                                Log.v("function", "getCameraImage")
-                                throw Exception("Function does not exist:" + functionCall.name)
+                                Log.e("function", "no function to call")
+                                // throw Exception("Function does not exist:" + functionCall.name)
                             }
                         }
                         // Return the result of the function call to the model.
@@ -250,6 +262,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 bitmap?.let {
                     Log.d("ImageInfo", "Bitmap width: ${it.width}, height: ${it.height}")
                 }
+                // VLM procedure
+                inferenceVLM(bitmap)
             }
 
             base64
@@ -273,20 +287,24 @@ class JetsonViewModel @javax.inject.Inject constructor(
         }
 
         // VLM procedure
-        // Convert the input Bitmap object to an MPImage object to run inference
+        inferenceVLM(bitmap)
+    }
+
+    private fun inferenceVLM(bitmap: Bitmap) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Convert the input Bitmap object to an MPImage object to run inference
                 // Process the bitmap (if needed) using BitmapImageBuilder
                 val mpImage = BitmapImageBuilder(bitmap).build()
                 session.addQueryChunk(userPrompt.value)
                 session.addImage(mpImage)
 
                 var stringBuilder = ""
-                session.generateResponseAsync({ partialResult, done ->
+                session.generateResponseAsync { partialResult, done ->
                     stringBuilder += partialResult
                     Log.v("image_partial", "$stringBuilder $done")
                     updateVlmResult(stringBuilder)
-                })
+                }
 
                 session.close()
             } catch (e: Exception) {
@@ -300,16 +318,24 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setName("getCameraImage")
             .setDescription("Function to open the camera")
             .build()
+        val openPhoneGallery = FunctionDeclaration.newBuilder()
+            .setName("openPhoneGallery")
+            .setDescription("Function to open the gallery")
+            .build()
         val tool = Tool.newBuilder()
             .addFunctionDeclarations(getCameraImage)
+            .addFunctionDeclarations(openPhoneGallery)
             .build()
 
         val formatter =
             HammerFormatter(ModelFormatterOptions.builder().setAddPromptTemplate(true).build())
 
         val llmInferenceOptions = LlmInferenceOptions.builder()
-            .setModelPath("/data/local/tmp/Hammer2.1-1.5b_seq128_q8_ekv1280.task") // hammer2.1_1.5b_q8_ekv4096.task or gemma-3n-E2B-it-int4.task
-            .setMaxTokens(512)                                              // Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task
+            // hammer2.1_1.5b_q8_ekv4096.task -> crashing
+            // gemma-3n-E2B-it-int4.task
+            // Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task
+            .setModelPath("/data/local/tmp/Hammer2.1-1.5b_seq128_q8_ekv1280.task")
+            .setMaxTokens(512)
             .apply { setPreferredBackend(Backend.CPU) }
             .build()
 
@@ -322,7 +348,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setRole("system")
             .addParts(
                 Part.newBuilder()
-                    .setText("This assistant will help you to open the camera")
+                    .setText("You are a helpful assistant that will open the camera or the gallery.")
             )
             .build()
 
@@ -352,63 +378,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setGraphOptions(GraphOptions.builder().setEnableVisionModality(true).build())
             .build()
         return LlmInferenceSession.createFromOptions(llmInference, sessionOptions)
-    }
-
-    /** Streams the WAV bytes into Downloads and returns the URI. */
-    private fun saveWavToDownloads(body: ResponseBody): Uri {
-        val fileName = "generated_${System.currentTimeMillis()}.mp3"
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // MediaStore on Android 10+
-            val resolver = context.contentResolver
-            val cv = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(MediaStore.Downloads.MIME_TYPE, "audio/mp3")
-            }
-            val uri = resolver
-                .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
-                ?: throw IOException("Failed to create MediaStore record")
-            resolver.openOutputStream(uri)!!.use { out ->
-                body.byteStream().copyTo(out)
-            }
-            uri
-        } else {
-            // Legacy path on < Android 10
-            val downloads = File(
-                Environment.getExternalStorageDirectory(),
-                Environment.DIRECTORY_DOWNLOADS
-            ).apply { if (!exists()) mkdirs() }
-            val outFile = File(downloads, fileName)
-            FileOutputStream(outFile).use { out ->
-                body.byteStream().copyTo(out)
-            }
-            Uri.fromFile(outFile)
-        }
-    }
-
-    /** Sets up MediaPlayer, prepares async and starts playback when ready. */
-    private fun playAudio(uri: Uri) {
-        stopAudio()
-
-        mediaPlayer = MediaPlayer().apply {
-            setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            setDataSource(context, uri)
-            prepare()
-            start()
-        }
-    }
-
-    private fun stopAudio() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-                it.reset()
-            }
-        }
     }
 
     override fun onCleared() {
