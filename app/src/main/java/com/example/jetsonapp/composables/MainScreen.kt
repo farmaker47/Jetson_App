@@ -233,7 +233,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                .padding(start = 16.dp, end = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             Box(
@@ -243,7 +243,17 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             ) {
                 ImageFromUri(imageUri, capturedBitmap)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                text = "Hold the microphone button and speak!",
+                color = Color.Black,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Center,
+            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -550,7 +560,7 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             placeholder = painterResource(R.drawable.image_icon),
             error = painterResource(R.drawable.image_icon),
             modifier = Modifier
-                .size(320.dp)
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
         )
     } else {
@@ -558,7 +568,7 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Loaded image",
             modifier = Modifier
-                .size(320.dp)
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp))
         )
     }
