@@ -1,16 +1,11 @@
 package com.example.jetsonapp
 
 import android.app.Application
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -39,7 +34,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.ResponseBody
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -96,19 +90,21 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private lateinit var generativeModel: GenerativeModel
     private lateinit var session: LlmInferenceSession
 
-    fun initialize() {
+    private fun initialize() {
         updateJetsonIsWorking(true)
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
             generativeModel = createGenerativeModel()
-            session = createSession(context)
             updateJetsonIsWorking(false)
+            session = createSession(context)
         }
     }
 
     init {
         whisperEngine.initialize(MODEL_PATH, getAssetFilePath(context = context), false)
         recorder.setFilePath(getFilePath(context = context))
+
+        initialize()
     }
 
     fun startRecordingWav() {

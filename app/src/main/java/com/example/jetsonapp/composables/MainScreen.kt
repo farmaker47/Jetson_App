@@ -134,10 +134,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             tempPhotoUri = context.createTempPictureUri()
 
             //cameraLauncher.launch(tempPhotoUri)
-//            tempPhotoUri?.let {
-//                jetsonViewModel.updateSelectedImage(context, tempPhotoUri)
-//                imageUri = tempPhotoUri
-//            }
+
             showCameraCaptureBottomSheet = true
         }
     }
@@ -147,7 +144,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
         rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             uri?.let {
                 scope.launch {
-                    delay(1000)
+                    delay(1500)
                     jetsonViewModel.updateSelectedImage(context, uri)
                     imageUri = uri
                     jetsonViewModel.updatePhoneGalleryTriggered(false)
@@ -179,11 +176,9 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                     context, Manifest.permission.CAMERA
                 ) -> {
                     tempPhotoUri = context.createTempPictureUri()
+
                     // cameraLauncher.launch(tempPhotoUri)
-//                    tempPhotoUri?.let {
-//                        jetsonViewModel.updateSelectedImage(context, tempPhotoUri)
-//                        imageUri = tempPhotoUri
-//                    }
+
                     showCameraCaptureBottomSheet = true
                 }
 
@@ -532,7 +527,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                                     imageUri = "".toUri()
                                     capturedBitmap = bitmap
                                     scope.launch {
-                                        delay(1000)
+                                        delay(1500)
                                         jetsonViewModel.convertBitmapToBase64(bitmap)
                                     }
                                 } catch (e: Exception) {
