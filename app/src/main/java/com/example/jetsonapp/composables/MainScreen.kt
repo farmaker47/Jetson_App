@@ -106,28 +106,21 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val microphoneIsRecording by jetsonViewModel.microphoneIsRecording.collectAsStateWithLifecycle()
     val cameraFunctionTriggered by jetsonViewModel.cameraFunctionTriggered.collectAsStateWithLifecycle()
     val phoneGalleryTriggered by jetsonViewModel.phoneGalleryTriggered.collectAsStateWithLifecycle()
-    val userPrompt by jetsonViewModel.userPrompt.collectAsStateWithLifecycle()
+    // val userPrompt by jetsonViewModel.userPrompt.collectAsStateWithLifecycle()
     val vlmResult by jetsonViewModel.vlmResult.collectAsStateWithLifecycle()
     var showCameraCaptureBottomSheet by remember { mutableStateOf(false) }
     val cameraCaptureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var tempPhotoUri by remember { mutableStateOf(value = Uri.EMPTY) }
-    val cameraLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { isImageSaved ->
-            if (isImageSaved) {
-                Log.v("image_", "isImageSaved")
-                tempPhotoUri?.let {
-                    jetsonViewModel.updateSelectedImage(context, tempPhotoUri)
-                    imageUri = tempPhotoUri
-                }
-
-                /*handleImageSelected(
-                    context = context,
-                    uri = tempPhotoUri,
-                    onImageSelected = onImageSelected,
-                    rotateForPortrait = true,
-                )*/
-            }
-        }
+//    val cameraLauncher =
+//        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { isImageSaved ->
+//            if (isImageSaved) {
+//                Log.v("image_", "isImageSaved")
+//                tempPhotoUri?.let {
+//                    jetsonViewModel.updateSelectedImage(context, tempPhotoUri)
+//                    imageUri = tempPhotoUri
+//                }
+//            }
+//        }
 
     val takePicturePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -135,7 +128,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
         if (permissionGranted) {
             tempPhotoUri = context.createTempPictureUri()
 
-            //cameraLauncher.launch(tempPhotoUri)
+            // cameraLauncher.launch(tempPhotoUri)
 
             showCameraCaptureBottomSheet = true
         }
@@ -240,35 +233,35 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                .padding(top = 8.dp, start = 16.dp, end = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(8.dp))
             ) {
                 ImageFromUri(imageUri, capturedBitmap)
             }
-            Spacer(modifier = Modifier.height(42.dp))
-            Box {
-                Column(
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        text = vlmResult,
-                        color = Color.Black,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 32.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    text = vlmResult,
+                    color = Color.Black,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 32.sp,
+                    textAlign = TextAlign.Start,
+                )
             }
         }
 
@@ -279,8 +272,8 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 //.fillMaxWidth()
                 .height(90.dp)
                 .padding(horizontal = 16.dp, vertical = 16.dp),
-                //.clip(RoundedCornerShape(16.dp))
-                //.border(BorderStroke(1.dp, Color.Black), RoundedCornerShape(16.dp)),
+            //.clip(RoundedCornerShape(16.dp))
+            //.border(BorderStroke(1.dp, Color.Black), RoundedCornerShape(16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.width(8.dp))
@@ -558,7 +551,7 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             error = painterResource(R.drawable.image_icon),
             modifier = Modifier
                 .size(320.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(8.dp))
         )
     } else {
         Image(
@@ -566,7 +559,7 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             contentDescription = "Loaded image",
             modifier = Modifier
                 .size(320.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(8.dp))
         )
     }
 }
