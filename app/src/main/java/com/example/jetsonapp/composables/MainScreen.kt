@@ -236,13 +236,18 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 .padding(start = 16.dp, end = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(24.dp))
+
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
+                    .height(300.dp)
                     .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
             ) {
                 ImageFromUri(imageUri, capturedBitmap)
             }
+
             Text(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -267,9 +272,9 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                         .padding(16.dp),
                     text = vlmResult,
                     color = Color.Black,
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    lineHeight = 32.sp,
+                    lineHeight = 22.sp,
                     textAlign = TextAlign.Start,
                 )
             }
@@ -539,7 +544,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                     ) {
                         Icon(
                             Icons.Rounded.FlipCameraAndroid,
-                            contentDescription = "",
+                            contentDescription = "change to front camera",
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.size(24.dp)
                         )
@@ -560,7 +565,7 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             placeholder = painterResource(R.drawable.image_icon),
             error = painterResource(R.drawable.image_icon),
             modifier = Modifier
-                .fillMaxWidth()
+                .size(if (uri == "".toUri()) 72.dp else 300.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
     } else {
@@ -572,4 +577,5 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
                 .clip(RoundedCornerShape(8.dp))
         )
     }
+
 }
