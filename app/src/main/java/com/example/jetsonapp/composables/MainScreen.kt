@@ -250,29 +250,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             ) {
                 ImageFromUri(imageUri, capturedBitmap)
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Box(
-                modifier = Modifier
-                    .height(48.dp)
-                    .align(Alignment.CenterHorizontally)
-            ) {
-                if (jetsonIsWorking) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Loading the models",
-                            color = Color.Black,
-                            fontSize = 24.sp,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator(
-                            color = Color.Black
-                        )
-                    }
-                }
-            }
             Spacer(modifier = Modifier.height(42.dp))
             Box {
                 Column(
@@ -298,11 +275,12 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
         // Microphone row at the bottom
         Row(
             modifier = Modifier
-                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally)
+                //.fillMaxWidth()
                 .height(90.dp)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .border(BorderStroke(1.dp, Color.Black), RoundedCornerShape(16.dp)),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+                //.clip(RoundedCornerShape(16.dp))
+                //.border(BorderStroke(1.dp, Color.Black), RoundedCornerShape(16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.width(8.dp))
@@ -318,46 +296,61 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 colorFilter = ColorFilter.tint(colorResource(id = R.color.black))
             )
 
+            Spacer(modifier = Modifier.width(48.dp))
             // Center text taking available space
-            Text(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
-                text = userPrompt,
-                color = Color.Black,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 22.sp,
-                textAlign = TextAlign.Center,
-            )
+//            Text(
+//                modifier = Modifier
+//                    .weight(1f)
+//                    .padding(horizontal = 16.dp),
+//                text = userPrompt,
+//                color = Color.Black,
+//                fontSize = 20.sp,
+//                fontWeight = FontWeight.Bold,
+//                lineHeight = 22.sp,
+//                textAlign = TextAlign.Center,
+//            )
 
             // Microphone icon at the far right with size slightly smaller than the row height
-            Image(
-                painter = painterResource(id = R.drawable.baseline_mic_24),
-                contentDescription = "hold the microphone and speak",
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .clickable { /* Do something */ }
-                    .pointerInteropFilter {
-                        when (it.action) {
-                            MotionEvent.ACTION_UP -> {
-                                launcherAudio.launch(Manifest.permission.RECORD_AUDIO)
-                            }
+            if (jetsonIsWorking) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = Color.Black
+                        )
+                    }
+                }
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.baseline_mic_24),
+                    contentDescription = "hold the microphone and speak",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .clickable { /* Do something */ }
+                        .pointerInteropFilter {
+                            when (it.action) {
+                                MotionEvent.ACTION_UP -> {
+                                    launcherAudio.launch(Manifest.permission.RECORD_AUDIO)
+                                }
 
-                            else -> {
-                                jetsonViewModel.startRecordingWav()
-                                jetsonViewModel.updateMicrophoneIsRecording(true)
+                                else -> {
+                                    jetsonViewModel.startRecordingWav()
+                                    jetsonViewModel.updateMicrophoneIsRecording(true)
+                                }
                             }
-                        }
-                        true
-                    },
-                contentScale = ContentScale.Fit,
-                colorFilter = ColorFilter.tint(
-                    if (microphoneIsRecording) colorResource(id = R.color.teal_200)
-                    else colorResource(id = R.color.black)
+                            true
+                        },
+                    contentScale = ContentScale.Fit,
+                    colorFilter = ColorFilter.tint(
+                        if (microphoneIsRecording) colorResource(id = R.color.teal_200)
+                        else colorResource(id = R.color.black)
+                    )
                 )
-            )
+            }
             Spacer(modifier = Modifier.width(8.dp))
         }
     }
@@ -563,13 +556,17 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             contentDescription = "Loaded image",
             placeholder = painterResource(R.drawable.image_icon),
             error = painterResource(R.drawable.image_icon),
-            modifier = Modifier.size(320.dp).clip(RoundedCornerShape(16.dp))
+            modifier = Modifier
+                .size(320.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     } else {
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Loaded image",
-            modifier = Modifier.size(320.dp).clip(RoundedCornerShape(16.dp))
+            modifier = Modifier
+                .size(320.dp)
+                .clip(RoundedCornerShape(16.dp))
         )
     }
 }

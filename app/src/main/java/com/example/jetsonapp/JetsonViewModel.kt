@@ -51,6 +51,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private val whisperEngine: IWhisperEngine = WhisperEngine(context)
     private val recorder: Recorder = Recorder(context)
     private val outputFileWav = File(application.filesDir, RECORDING_FILE_WAV)
+    private var transcribedText = ""
     private val _userPrompt = MutableStateFlow("")
     val userPrompt = _userPrompt.asStateFlow()
     private fun updateUserPrompt(newValue: String) {
@@ -88,7 +89,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     private lateinit var generativeModel: GenerativeModel
-    private lateinit var session: LlmInferenceSession
+    private var session: LlmInferenceSession? = null
 
     private fun initialize() {
         updateJetsonIsWorking(true)
@@ -114,14 +115,16 @@ class JetsonViewModel @javax.inject.Inject constructor(
     fun stopRecordingWav() {
         recorder.stop()
         updateVlmResult("")
+        updateJetsonIsWorking(true)
 
         try {
             viewModelScope.launch(Dispatchers.IO) {
                 // Offline speech to text
-                val transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
+                transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
                 Log.v("transription", transcribedText.trim())
 
-                updateUserPrompt(transcribedText.trim())
+                // updateUserPrompt(transcribedText.trim())
+                updateVlmResult(transcribedText.trim())
                 // sendData()
 
                 // Example from the Google's function calling app
@@ -193,15 +196,18 @@ class JetsonViewModel @javax.inject.Inject constructor(
                             "getCameraImage" -> {
                                 Log.v("function", "getCameraImage")
                                 _cameraFunctionTriggered.value = true
+                                updateJetsonIsWorking(false)
                             }
 
                             "openPhoneGallery" -> {
                                 Log.v("function", "openPhoneGallery")
                                 _phoneGalleryTriggered.value = true
+                                updateJetsonIsWorking(false)
                             }
 
                             else -> {
                                 Log.e("function", "no function to call")
+                                updateJetsonIsWorking(false)
                                 // throw Exception("Function does not exist:" + functionCall.name)
                             }
                         }
@@ -235,6 +241,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
             Log.e(TAG, e.toString())
         } catch (e: Exception) {
             Log.e(TAG, "Model Error: ${e.message}", e)
+        } finally {
+            // updateJetsonIsWorking(false)
         }
     }
 
@@ -243,6 +251,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private var selectedImage = ""
 
     fun updateSelectedImage(context: Context, uri: Uri) {
+        updateJetsonIsWorking(true)
         selectedImage = try {
             val contentResolver = context.contentResolver
 
@@ -270,6 +279,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     fun convertBitmapToBase64(bitmap: Bitmap) {
+        updateJetsonIsWorking(true)
         selectedImage = try {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
@@ -292,17 +302,18 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 // Convert the input Bitmap object to an MPImage object to run inference
                 // Process the bitmap (if needed) using BitmapImageBuilder
                 val mpImage = BitmapImageBuilder(bitmap).build()
-                session.addQueryChunk(userPrompt.value)
-                session.addImage(mpImage)
+                session?.addQueryChunk(userPrompt.value)
+                session?.addImage(mpImage)
 
                 var stringBuilder = ""
-                session.generateResponseAsync { partialResult, done ->
+                session?.generateResponseAsync { partialResult, done ->
+                    updateJetsonIsWorking(false)
                     stringBuilder += partialResult
                     Log.v("image_partial", "$stringBuilder $done")
-                    updateVlmResult(stringBuilder)
+                    updateVlmResult(transcribedText + "\n\n" + stringBuilder)
                 }
 
-                session.close()
+                session?.close()
             } catch (e: Exception) {
                 Log.e("image_exception", e.message.toString())
             }
@@ -417,6 +428,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     fun stopGenerating() {
-        session.cancelGenerateResponseAsync()
+        session?.cancelGenerateResponseAsync()
     }
 }
