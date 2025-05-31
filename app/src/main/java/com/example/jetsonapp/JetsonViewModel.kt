@@ -52,14 +52,14 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private val recorder: Recorder = Recorder(context)
     private val outputFileWav = File(application.filesDir, RECORDING_FILE_WAV)
     private val _userPrompt = MutableStateFlow("")
-    private val userPrompt = _userPrompt.asStateFlow()
+    val userPrompt = _userPrompt.asStateFlow()
     private fun updateUserPrompt(newValue: String) {
         _userPrompt.value = newValue
     }
 
     private val _vlmResult = MutableStateFlow("")
     val vlmResult = _vlmResult.asStateFlow()
-    fun updateVlmResult(newValue: String) {
+    private fun updateVlmResult(newValue: String) {
         _vlmResult.value = newValue
     }
 
@@ -414,5 +414,9 @@ class JetsonViewModel @javax.inject.Inject constructor(
             }
         }
         return file.absolutePath
+    }
+
+    fun stopGenerating() {
+        session.cancelGenerateResponseAsync()
     }
 }

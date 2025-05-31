@@ -22,18 +22,19 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.lifecycle.awaitInstance
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FlipCameraAndroid
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -105,6 +106,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val microphoneIsRecording by jetsonViewModel.microphoneIsRecording.collectAsStateWithLifecycle()
     val cameraFunctionTriggered by jetsonViewModel.cameraFunctionTriggered.collectAsStateWithLifecycle()
     val phoneGalleryTriggered by jetsonViewModel.phoneGalleryTriggered.collectAsStateWithLifecycle()
+    val userPrompt by jetsonViewModel.userPrompt.collectAsStateWithLifecycle()
     val vlmResult by jetsonViewModel.vlmResult.collectAsStateWithLifecycle()
     var showCameraCaptureBottomSheet by remember { mutableStateOf(false) }
     val cameraCaptureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -229,122 +231,113 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 16.dp, bottom = 48.dp),
-        verticalArrangement = Arrangement.Center,
+            .padding(top = 28.dp, bottom = 48.dp, start = 0.dp, end = 0.dp)
+            .background(Color.LightGray)
+            .border(BorderStroke(2.dp, Color.Black))
     ) {
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            ImageFromUri(imageUri, capturedBitmap)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Box(
+        // Top content section
+        Column(
             modifier = Modifier
-                .height(48.dp)
-                .align(Alignment.CenterHorizontally)
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
         ) {
-            if (jetsonIsWorking) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                ImageFromUri(imageUri, capturedBitmap)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .height(48.dp)
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                if (jetsonIsWorking) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Loading the models",
+                            color = Color.Black,
+                            fontSize = 24.sp,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CircularProgressIndicator(
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(42.dp))
+            Box {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "Loading the models",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        text = vlmResult,
                         color = Color.Black,
                         fontSize = 24.sp,
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator(
-                        color = Color.Black
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 32.sp,
+                        textAlign = TextAlign.Center,
                     )
                 }
-
             }
         }
 
-        Spacer(modifier = Modifier.height(42.dp))
-
+        // Microphone row at the bottom
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .border(BorderStroke(1.dp, Color.Black), RoundedCornerShape(16.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(onClick = {
-                imagePickerLauncher.launch(
-                    arrayOf(
-                        "image/*"
-                        // "application/pdf"
-                        // "text/plain",
-                        // "application/msword",  // .doc
-                        // "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        // // .docx
-                    )
-                )
-            }) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddCircle,
-                        contentDescription = "Send Icon"
-                    )
-                    Text(
-                        text = "Image",
-                        color = Color.Black,
-                        fontSize = 24.sp,
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            // Stop button at the far left with size slightly smaller than the row height
+            Image(
+                painter = painterResource(id = R.drawable.baseline_stop_circle_24),
+                contentDescription = "stop generating",
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable { jetsonViewModel.stopGenerating() },
+                contentScale = ContentScale.Fit,
+                colorFilter = ColorFilter.tint(colorResource(id = R.color.black))
+            )
 
-            // Spacer(modifier = Modifier.width(24.dp))
+            // Center text taking available space
+            Text(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+                text = userPrompt,
+                color = Color.Black,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 22.sp,
+                textAlign = TextAlign.Center,
+            )
 
-//            Button(onClick = {
-//                imagePickerLauncher.launch(
-//                    arrayOf(
-//                        "image/*"
-//                        // "application/pdf"
-//                        // "text/plain",
-//                        // "application/msword",  // .doc
-//                        // "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-//                        // // .docx
-//                    )
-//                )
-//            }) {
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-//                ) {
-//                    Image(
-//                        painter = painterResource(id = R.drawable.baseline_photo_camera_24),
-//                        contentDescription = null,
-//                        modifier = Modifier
-//                            .align(Alignment.CenterVertically)
-//                            .padding(top = 4.dp)
-//                            .size(24.dp),
-//                        contentScale = ContentScale.Fit,
-//                        colorFilter = ColorFilter.tint(Color.Black)
-//                    )
-//                    Text(
-//                        text = "Picture",
-//                        color = Color.Black,
-//                        fontSize = 24.sp,
-//                    )
-//                }
-//            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
+            // Microphone icon at the far right with size slightly smaller than the row height
             Image(
                 painter = painterResource(id = R.drawable.baseline_mic_24),
-                contentDescription = null,
+                contentDescription = "hold the microphone and speak",
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
-                    .align(Alignment.CenterVertically)
                     .clickable { /* Do something */ }
                     .pointerInteropFilter {
                         when (it.action) {
@@ -361,34 +354,12 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                     },
                 contentScale = ContentScale.Fit,
                 colorFilter = ColorFilter.tint(
-                    if (microphoneIsRecording) colorResource(id = R.color.teal_200) else colorResource(
-                        id = R.color.black
-                    )
+                    if (microphoneIsRecording) colorResource(id = R.color.teal_200)
+                    else colorResource(id = R.color.black)
                 )
             )
+            Spacer(modifier = Modifier.width(8.dp))
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                text = vlmResult,
-                color = Color.Black,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 32.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(80.dp))
     }
 
     if (showCameraCaptureBottomSheet) {
@@ -592,13 +563,13 @@ fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
             contentDescription = "Loaded image",
             placeholder = painterResource(R.drawable.image_icon),
             error = painterResource(R.drawable.image_icon),
-            modifier = Modifier.size(320.dp)
+            modifier = Modifier.size(320.dp).clip(RoundedCornerShape(16.dp))
         )
     } else {
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Loaded image",
-            modifier = Modifier.size(320.dp)
+            modifier = Modifier.size(320.dp).clip(RoundedCornerShape(16.dp))
         )
     }
 }
