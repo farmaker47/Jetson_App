@@ -466,7 +466,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 ) {
                     Icon(
                         Icons.Rounded.Close,
-                        contentDescription = "",
+                        contentDescription = "close the camera",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -529,7 +529,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 ) {
                     Icon(
                         Icons.Rounded.PhotoCamera,
-                        contentDescription = "",
+                        contentDescription = "capture image",
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(36.dp)
                     )
