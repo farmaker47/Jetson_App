@@ -106,7 +106,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
     val microphoneIsRecording by jetsonViewModel.microphoneIsRecording.collectAsStateWithLifecycle()
     val cameraFunctionTriggered by jetsonViewModel.cameraFunctionTriggered.collectAsStateWithLifecycle()
     val phoneGalleryTriggered by jetsonViewModel.phoneGalleryTriggered.collectAsStateWithLifecycle()
-    // val userPrompt by jetsonViewModel.userPrompt.collectAsStateWithLifecycle()
     val vlmResult by jetsonViewModel.vlmResult.collectAsStateWithLifecycle()
     var showCameraCaptureBottomSheet by remember { mutableStateOf(false) }
     val cameraCaptureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -568,7 +567,6 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
 @Composable
 fun ImageFromUri(uri: Uri?, bitmap: Bitmap) {
     if (uri != null && uri != "".toUri() || bitmap.width == 1) {
-        // Log.v("image_uri", uri.toString())
         AsyncImage(
             model = uri,
             contentDescription = "Loaded image",

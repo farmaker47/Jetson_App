@@ -131,7 +131,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
                 updateUserPrompt(transcribedText.trim())
                 updateVlmResult(transcribedText.trim())
-                // sendData()
 
                 // Example from the Google's function calling app
                 // https://github.com/google-ai-edge/ai-edge-apis/tree/main/examples/function_calling/healthcare_form_demo
@@ -139,49 +138,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 // https://github.com/google-ai-edge/ai-edge-torch/tree/main/ai_edge_torch/generative/examples
                 // Speech recognition example
                 // https://medium.com/@andraz.pajtler/android-speech-to-text-the-missing-guide-part-1-824e2636c45a
-//                try {
-//                    val chat = generativeModel.startChat()
-//                    val response = chat.sendMessage(transcribedText)
-//                    Log.d(TAG, "Hammer Response: $response") // Log response
-//
-//                    response.getCandidates(0).content.partsList?.let { parts ->
-//                        try {
-//                            // extract the function from all the parts in the response
-//                            parts.forEach { part ->
-//                                part?.functionCall?.args?.fieldsMap?.forEach { (key, value) ->
-//                                    value.stringValue?.let { stringValue ->
-//                                        if (stringValue != "<unknown>") {
-//                                            when (key) {
-//                                                "getCameraImage" -> {
-//                                                    Log.v("function", "getCameraImage")
-//                                                }
-//
-//                                                else -> {
-//                                                    throw Exception("Unknown function: $key value: $value")
-//                                                }
-//                                            }
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        } catch (e: JSONException) {
-//                            Log.e(TAG, "JSON Parsing Error: ${e.message}")
-//                        } finally {
-//                            Log.d(TAG, "STOP PROCESSING")
-//                        }
-//                    } ?: run {
-//                        Log.e(TAG, "Model response was null")
-//                    }
-//                } catch (e: Exception) {
-//                    Log.e(TAG, "Model Error: ${e.message}", e)
-//                    val errorMessage = if (e is IndexOutOfBoundsException) {
-//                        "The model returned no response to \"$transcribedText\"."
-//                    } else {
-//                        e.localizedMessage
-//                    }
-//                } finally {
-//                    Log.i(TAG, "Model processing ended")
-//                }
 
                 // Extract the model's message from the response.
                 val chat = generativeModel?.startChat()
@@ -274,8 +230,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
         }
     }
 
-    // private val generativeModel by lazy { createGenerativeModel() }
-    // private val session by lazy { createSession(context) }
     private var selectedImage = ""
 
     fun updateSelectedImage(context: Context, uri: Uri) {
@@ -344,7 +298,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     updateVlmResult(transcribedText.trim() + "\n\n" + stringBuilder)
 
                     // Speak the chunks
-                    // val cleanText = partialResult.replace("\n", ". ")
                     chunkBuffer.append(chunk)
                     chunkCounter++
 
@@ -390,9 +343,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
             HammerFormatter(ModelFormatterOptions.builder().setAddPromptTemplate(true).build())
 
         val llmInferenceOptions = LlmInferenceOptions.builder()
-            // hammer2.1_1.5b_q8_ekv4096.task -> crashing
+            // hammer2.1_1.5b_q8_ekv4096.task
             // gemma-3n-E2B-it-int4.task
-            // Qwen2.5-0.5B-Instruct_multi-prefill-seq_q8_ekv1280.task
             .setModelPath("/data/local/tmp/Hammer2.1-1.5b_seq128_q8_ekv1280.task")
             .setMaxTokens(512)
             .apply { setPreferredBackend(Backend.CPU) }
