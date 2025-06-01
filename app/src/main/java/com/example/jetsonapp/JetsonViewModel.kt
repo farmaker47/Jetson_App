@@ -59,7 +59,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     private lateinit var textToSpeech: TextToSpeech
     private var transcribedText = ""
     private val _userPrompt = MutableStateFlow("")
-    val userPrompt = _userPrompt.asStateFlow()
+    private val userPrompt = _userPrompt.asStateFlow()
     private fun updateUserPrompt(newValue: String) {
         _userPrompt.value = newValue
     }
@@ -150,8 +150,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     // If the message contains a function call, execute the function.
                     if (message.hasFunctionCall()) {
                         val functionCall = message.functionCall
-                        // val args = functionCall.args.fieldsMap
-                        // var result = null
 
                         // Call the appropriate function.
                         when (functionCall.name) {
@@ -180,19 +178,6 @@ class JetsonViewModel @javax.inject.Inject constructor(
                                 // throw Exception("Function does not exist:" + functionCall.name)
                             }
                         }
-                        // Return the result of the function call to the model.
-                        /*val functionResponse =
-                            FunctionResponse.newBuilder()
-                                .setName(functionCall.getName())
-                                .setResponse(
-                                    Struct.newBuilder()
-                                        .putFields(
-                                            "result",
-                                            Value.newBuilder().setStringValue(result).build()
-                                        )
-                                )
-                                .build()
-                        val response = chat.sendMessage(functionResponse)*/
                     } else if (message.hasText()) {
                         Log.v("function_else_if", message.text)
                         Log.v(
