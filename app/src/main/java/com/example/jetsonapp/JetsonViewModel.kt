@@ -326,8 +326,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private fun inferenceVLM(bitmap: Bitmap) {
         var chunkCounter = 0
-        val chunkBuffer = StringBuilder()
         viewModelScope.launch(Dispatchers.IO) {
+            val chunkBuffer = StringBuilder()
             try {
                 textToSpeech = TextToSpeech(context, this@JetsonViewModel)
                 // Convert the input Bitmap object to an MPImage object to run inference
