@@ -243,14 +243,14 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 color = Color.Black,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 24.sp,
+                lineHeight = 28.sp,
                 textAlign = TextAlign.Center,
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(260.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color.White),
                 contentAlignment = Alignment.Center

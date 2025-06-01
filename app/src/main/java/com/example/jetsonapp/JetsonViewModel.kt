@@ -129,7 +129,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
                 Log.v("transription", transcribedText.trim())
 
-                // updateUserPrompt(transcribedText.trim())
+                updateUserPrompt(transcribedText.trim())
                 updateVlmResult(transcribedText.trim())
                 // sendData()
 
