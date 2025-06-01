@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.mediapipe.tasks.genai)
     implementation(libs.mediapipe.tasks.text)
     implementation(libs.ai.edge.localagents.fc)
+    implementation(libs.mlkit.language.id)
 
     implementation(libs.accompanist.permissions)
 

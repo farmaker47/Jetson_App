@@ -16,8 +16,8 @@ kotlin = "2.1.0"
 lifecycleRuntimeKtx = "2.9.0"
 localagentsFc = "0.1.0"
 materialIconExtended = "1.7.8"
-mediapipeTasksImageGenerator = "0.10.21"
 mediapipeTasksText = "0.10.21"
+mlkitLanguageId = "17.0.6"
 retrofit = "2.11.0"
 tasksGenai = "0.10.24"
 tensorflowLite = "2.9.0"
@@ -54,7 +54,7 @@ coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose" }
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "tasksGenai" }
 mediapipe-tasks-text = { group = "com.google.mediapipe", name = "tasks-text", version.ref = "mediapipeTasksText" }
-mediapipe-tasks-imagegen = { group = "com.google.mediapipe", name = "tasks-vision-image-generator", version.ref = "mediapipeTasksImageGenerator" }
+mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkitLanguageId" }
 ai-edge-localagents-fc = { group = "com.google.ai.edge.localagents", name = "localagents-fc", version.ref = "localagentsFc" }
 camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraX"}
 camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "cameraX"}

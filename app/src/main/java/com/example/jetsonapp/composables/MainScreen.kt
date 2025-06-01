@@ -235,7 +235,17 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 .weight(1f)
                 .padding(start = 16.dp, end = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                text = "Demo of\nSTT -> FC -> VLM -> TTS",
+                color = Color.Black,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 24.sp,
+                textAlign = TextAlign.Center,
+            )
 
             Box(
                 modifier = Modifier

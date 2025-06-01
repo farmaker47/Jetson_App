@@ -6,11 +6,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.jetsonapp.internet.KokoroService
 import com.example.jetsonapp.recorder.Recorder
 import com.example.jetsonapp.utils.CameraUtil.extractFunctionName
 import com.example.jetsonapp.whisperengine.IWhisperEngine
@@ -29,6 +31,7 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.LlmInference.Backend
 import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
+import com.google.mlkit.nl.languageid.LanguageIdentification
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,19 +41,21 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.Locale
 
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
-    application: Application,
-    private val kokoroService: KokoroService
+    application: Application
 ) :
-    AndroidViewModel(application) {
+    AndroidViewModel(application), TextToSpeech.OnInitListener {
 
     private val context = application
     private var mediaPlayer: MediaPlayer? = null
     private val whisperEngine: IWhisperEngine = WhisperEngine(context)
     private val recorder: Recorder = Recorder(context)
     private val outputFileWav = File(application.filesDir, RECORDING_FILE_WAV)
+    private val languageIdentifier = LanguageIdentification.getClient()
+    private lateinit var textToSpeech: TextToSpeech
     private var transcribedText = ""
     private val _userPrompt = MutableStateFlow("")
     val userPrompt = _userPrompt.asStateFlow()
@@ -88,7 +93,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         _phoneGalleryTriggered.value = newValue
     }
 
-    private lateinit var generativeModel: GenerativeModel
+    private var generativeModel: GenerativeModel? = null
     private var session: LlmInferenceSession? = null
 
     private fun initialize() {
@@ -178,11 +183,11 @@ class JetsonViewModel @javax.inject.Inject constructor(
 //                }
 
                 // Extract the model's message from the response.
-                val chat = generativeModel.startChat()
-                val response = chat.sendMessage(userPrompt.value)
+                val chat = generativeModel?.startChat()
+                val response = chat?.sendMessage(userPrompt.value)
                 Log.v("function", "Model response: $response")
 
-                if (response.candidatesCount > 0 && response.getCandidates(0).content.partsList.size > 0) {
+                if (response != null && response.candidatesCount > 0 && response.getCandidates(0).content.partsList.size > 0) {
                     val message = response.getCandidates(0).content.getParts(0)
 
                     // If the message contains a function call, execute the function.
@@ -207,6 +212,11 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
                             else -> {
                                 Log.e("function", "no function to call")
+                                Toast.makeText(
+                                    context,
+                                    "No function to call, say something like \"open the camera\"",
+                                    Toast.LENGTH_LONG
+                                ).show()
                                 updateJetsonIsWorking(false)
                                 // throw Exception("Function does not exist:" + functionCall.name)
                             }
@@ -233,6 +243,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     }
                 } else {
                     Log.v("function_else_if", "no parts")
+                    updateJetsonIsWorking(false)
                 }
             }
         } catch (e: RuntimeException) {
@@ -297,20 +308,44 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     private fun inferenceVLM(bitmap: Bitmap) {
+        var chunkCounter = 0
+        val chunkBuffer = StringBuilder()
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                textToSpeech = TextToSpeech(context, this@JetsonViewModel)
                 // Convert the input Bitmap object to an MPImage object to run inference
                 // Process the bitmap (if needed) using BitmapImageBuilder
                 val mpImage = BitmapImageBuilder(bitmap).build()
-                session?.addQueryChunk(userPrompt.value)
+                session?.addQueryChunk(userPrompt.value + " in 20 words") // Limit if you do not want a vast output.
                 session?.addImage(mpImage)
 
                 var stringBuilder = ""
-                session?.generateResponseAsync { partialResult, done ->
+                session?.generateResponseAsync { chunk, done ->
                     updateJetsonIsWorking(false)
-                    stringBuilder += partialResult
-                    Log.v("image_partial", "$stringBuilder $done")
-                    updateVlmResult(transcribedText + "\n\n" + stringBuilder)
+                    stringBuilder += chunk
+                    // Log.v("image_partial", "$stringBuilder $done")
+                    updateVlmResult(transcribedText.trim() + "\n\n" + stringBuilder)
+
+                    // Speak the chunks
+                    // val cleanText = partialResult.replace("\n", ". ")
+                    chunkBuffer.append(chunk)
+                    chunkCounter++
+
+                    // Check if 7 chunks have been collected
+                    if (chunkCounter == 7) {
+                        // Speak out the combined text of the last 7 chunks
+                        speakOut(chunkBuffer.toString())
+                        Log.v("finished_main", chunkBuffer.toString())
+
+                        // Reset the buffer and the counter for the next group of chunks
+                        chunkBuffer.clear()
+                        chunkCounter = 0
+                    }
+                }
+
+                if (chunkBuffer.isNotEmpty()) {
+                    speakOut(chunkBuffer.toString())
+                    Log.v("finished_main", chunkBuffer.toString())
                 }
 
                 session?.close()
@@ -371,7 +406,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         // Configure inference options and create the inference instance
         val options = LlmInferenceOptions.builder()
             .setModelPath("/data/local/tmp/gemma-3n-E2B-it-int4.task")
-            .setMaxTokens(2024) // Default
+            .setMaxTokens(1024)
             .setPreferredBackend(Backend.GPU)
             .setMaxNumImages(1)
             .build()
@@ -391,6 +426,9 @@ class JetsonViewModel @javax.inject.Inject constructor(
         super.onCleared()
         mediaPlayer?.release()
         mediaPlayer = null
+        textToSpeech.stop()
+        textToSpeech.shutdown()
+        languageIdentifier.close()
     }
 
     companion object {
@@ -429,5 +467,54 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     fun stopGenerating() {
         session?.cancelGenerateResponseAsync()
+        updateJetsonIsWorking(false)
+    }
+
+    // Function to use for Text-to-Speech.
+    private fun speakOut(text: String) {
+        val defaultLocale = Locale("en")
+        languageIdentifier.identifyLanguage(text)
+            .addOnSuccessListener { languageCode ->
+                val locale = if (languageCode == "und") defaultLocale else Locale(languageCode)
+                textToSpeech.setLanguage(locale)
+                // Log.v("available_languages", textToSpeech.availableLanguages.toString())
+                textToSpeech.speak(text, TextToSpeech.QUEUE_ADD, null, "speech_utterance_id")
+            }
+            .addOnFailureListener {
+                textToSpeech.setLanguage(defaultLocale)
+                textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "speech_utterance_id")
+            }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            // TTS initialization successful
+            textToSpeech.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                }
+
+                override fun onDone(utteranceId: String?) {
+                    updateJetsonIsWorking(false)
+                }
+
+                override fun onError(utteranceId: String?, errorCode: Int) {
+                    updateJetsonIsWorking(false)
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun onError(p0: String?) {
+                }
+
+                override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                    updateJetsonIsWorking(false)
+                }
+
+                override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                }
+            })
+        } else {
+            // TTS initialization failed
+            Log.e("TTS", "Initialization failed")
+        }
     }
 }
