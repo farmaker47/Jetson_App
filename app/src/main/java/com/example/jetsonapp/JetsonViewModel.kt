@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -212,11 +213,13 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
                             else -> {
                                 Log.e("function", "no function to call")
-                                Toast.makeText(
-                                    context,
-                                    "No function to call, say something like \"open the camera\"",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "No function to call, say something like \"open the camera\"",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                                 updateJetsonIsWorking(false)
                                 // throw Exception("Function does not exist:" + functionCall.name)
                             }
@@ -240,9 +243,23 @@ class JetsonViewModel @javax.inject.Inject constructor(
                             "function_else_if",
                             extractFunctionName(message.text) ?: "no function"
                         )
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                "No function to call, say something like \"open the camera\"",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 } else {
                     Log.v("function_else_if", "no parts")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "No function to call, say something like \"open the camera\"",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                     updateJetsonIsWorking(false)
                 }
             }
@@ -390,7 +407,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setRole("system")
             .addParts(
                 Part.newBuilder()
-                    .setText("You are a helpful assistant that will open the camera or the gallery.")
+                    .setText("You are a helpful assistant that will open the camera or the phone gallery.")
             )
             .build()
 

@@ -239,7 +239,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                text = "Demo of\nSTT -> FC -> VLM -> TTS",
+                text = "Demo of\nSTT -> FC -> VLM -> TTS\nAll inference on device!",
                 color = Color.Black,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
