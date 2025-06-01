@@ -250,7 +250,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp)
+                    .height(240.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color.White),
                 contentAlignment = Alignment.Center
