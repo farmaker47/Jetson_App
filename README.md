@@ -117,6 +117,6 @@ Ensure you download and include the required model files in the correct folders 
 ## 🧭 Conclusion
 This project brings together cutting-edge AI technologies to deliver fully local, multimodal AI on mobile. With no need for cloud infrastructure, this solution paves the way for fast, secure, and personalized user experiences—right in your pocket.
 
-[🔗 Medium post](https://medium.com/p/d292259df780)
+[🔗 Medium post](https://medium.com/p/d292259df780) with links to download the models.
 
 ## #AISprint Google Cloud credits are provided for this project.
