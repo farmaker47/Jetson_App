@@ -3,7 +3,7 @@
 **Author**: Georgios Soloupis, AI and Android GDE  
 
 ## 🚀 Overview
-Running complex AI workflows—like converting speech to text (STT), triggering app functions, processing images with vision-language models (VLMs), and synthesizing speech (TTS), entirely on a **mobile device** is now a reality. This project shows how to combine these capabilities into a single Android application, all executed **locally**, with **no internet required**.
+Running complex AI workflows, like converting speech to text (STT), triggering app functions, processing images with vision-language models (VLMs), and synthesizing speech (TTS), entirely on a **mobile device** is now a reality. This project shows how to combine these capabilities into a single Android application, all executed **locally**, with **no internet required**.
 
 Key benefits include:
 - 🔒 **Enhanced privacy** (no cloud uploads)
