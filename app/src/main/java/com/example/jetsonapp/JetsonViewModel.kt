@@ -102,8 +102,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
             generativeModel = createGenerativeModel()
-            updateJetsonIsWorking(false)
             session = createSession(context)
+            updateJetsonIsWorking(false)
         }
     }
 
@@ -330,9 +330,9 @@ class JetsonViewModel @javax.inject.Inject constructor(
         val llmInferenceOptions = LlmInferenceOptions.builder()
             // hammer2.1_1.5b_q8_ekv4096.task
             // gemma-3n-E2B-it-int4.task
-            .setModelPath("/data/local/tmp/Hammer2.1-1.5b_seq128_q8_ekv1280.task")
+            .setModelPath("/data/local/tmp/hammer2p1_05b_seb.task")
             .setMaxTokens(512)
-            .apply { setPreferredBackend(Backend.CPU) }
+            .apply { setPreferredBackend(Backend.GPU) }
             .build()
 
         val llmInference =

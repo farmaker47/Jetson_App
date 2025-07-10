@@ -19,7 +19,7 @@ materialIconExtended = "1.7.8"
 mediapipeTasksText = "0.10.21"
 mlkitLanguageId = "17.0.6"
 retrofit = "2.11.0"
-tasksGenai = "0.10.24"
+tasksGenai = "0.10.25"
 tensorflowLite = "2.9.0"
 tensorflowLiteSupport = "0.4.3"
 
