@@ -21,6 +21,7 @@ import com.google.ai.edge.localagents.core.proto.Content
 import com.google.ai.edge.localagents.core.proto.FunctionDeclaration
 import com.google.ai.edge.localagents.core.proto.Part
 import com.google.ai.edge.localagents.core.proto.Tool
+import com.google.ai.edge.localagents.fc.GemmaFormatter
 import com.google.ai.edge.localagents.fc.GenerativeModel
 import com.google.ai.edge.localagents.fc.HammerFormatter
 import com.google.ai.edge.localagents.fc.LlmInferenceBackend
@@ -184,6 +185,13 @@ class JetsonViewModel @javax.inject.Inject constructor(
                             "function_else_if",
                             extractFunctionName(message.text) ?: "no function"
                         )
+                        if (extractFunctionName(message.text) == "getCameraImage") {
+                            _cameraFunctionTriggered.value = true
+                            updateJetsonIsWorking(false)
+                        } else if (extractFunctionName(message.text) == "openPhoneGallery") {
+                            _phoneGalleryTriggered.value = true
+                            updateJetsonIsWorking(false)
+                        }
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
@@ -344,7 +352,15 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setRole("system")
             .addParts(
                 Part.newBuilder()
-                    .setText("You are a helpful assistant that will open the camera or the phone gallery.")
+                    .setText("You are a helpful assistant.\n" +
+                            "\n" +
+                            "When the user provides input in a language other than English, your first task is to translate it into English before generating a response.\n" +
+                            "\n" +
+                            "If the input is already in English, proceed directly without translating.\n" +
+                            "\n" +
+                            "You can also open the camera or the phone gallery when requested to do.\n" +
+                            "\n" +
+                            "Always ensure the user’s request is understood in English before taking any action or providing a response")
             )
             .build()
 
