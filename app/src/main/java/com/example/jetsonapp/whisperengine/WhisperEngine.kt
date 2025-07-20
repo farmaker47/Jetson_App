@@ -73,15 +73,31 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
         val retFile = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
         fileDescriptor.close()
 
+//        val compatList = CompatibilityList()
+//        val options = Interpreter.Options().apply {
+//            if (compatList.isDelegateSupportedOnThisDevice) {
+//                // if the device has a supported GPU, add the GPU delegate
+//                val delegateOptions = compatList.bestOptionsForThisDevice
+//                this.addDelegate(GpuDelegate(delegateOptions))
+//            } else {
+//                // If the GPU is not supported, run on 7 threads
+//                // Check instructions on how 7 threads were selected here
+//                // https://ai.google.dev/edge/litert/models/measurement#native_benchmark_binary
+//                this.setNumThreads(7)
+//            }
+//        }
+//
+//        interpreter = Interpreter(retFile, options)
+
         val tfliteOptions = Interpreter.Options()
 
-        tfliteOptions.setUseXNNPACK(true)
-        tfliteOptions.setNumThreads(7)
+        // tfliteOptions.setUseXNNPACK(true)
+        tfliteOptions.setNumThreads(Runtime.getRuntime().availableProcessors())
 
         interpreter = Interpreter(retFile, tfliteOptions)
 
         // Also create input and output buffers
-        val inTensor  = interpreter!!.getInputTensor(0)
+        val inTensor = interpreter!!.getInputTensor(0)
         val outTensor = interpreter!!.getOutputTensor(0)
         /*check(outTensor.dataType() == DataType.INT32) {
             "Whisper model output must be INT32"
@@ -93,6 +109,19 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
             inTensor.shape()[0] * inTensor.shape()[1] * inTensor.shape()[2] * java.lang.Float.BYTES
         inputBuf = ByteBuffer.allocateDirect(inputSize).order(ByteOrder.nativeOrder())
     }
+
+//    private fun getMelSpectrogram(wavePath: String?): FloatArray {
+//        // Get samples in PCM_FLOAT format
+//        val samples = getSamples(wavePath)
+//
+//        val fixedInputSize = WhisperUtil.WHISPER_SAMPLE_RATE * WhisperUtil.WHISPER_CHUNK_SIZE
+//        val inputSamples = FloatArray(fixedInputSize)
+//        val copyLength = min(samples.size, fixedInputSize)
+//        System.arraycopy(samples, 0, inputSamples, 0, copyLength)
+//
+//        val cores = Runtime.getRuntime().availableProcessors()
+//        return mWhisperUtil.getMultiMelSpectrogram(inputSamples, inputSamples.size, cores)
+//    }
 
     private fun getMelSpectrogram(wavePath: String?): FloatArray {
         // Get samples in PCM_FLOAT format

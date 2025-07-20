@@ -81,6 +81,9 @@ dependencies {
 
     implementation(libs.tensorflow.lite)
     implementation(libs.tensorflow.lite.support)
+    // implementation("com.google.ai.edge.litert:litert-support:1.4.0")
+    // implementation("com.google.ai.edge.litert:litert-gpu:1.4.0")
+    // implementation("com.google.ai.edge.litert:litert-gpu-api:1.4.0")
     implementation(libs.mediapipe.tasks.genai)
     implementation(libs.mediapipe.tasks.text)
     implementation(libs.ai.edge.localagents.fc)

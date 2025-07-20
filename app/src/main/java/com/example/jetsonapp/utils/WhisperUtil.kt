@@ -8,6 +8,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Arrays
 import java.util.concurrent.CountDownLatch
+import kotlin.math.cos
+import kotlin.math.sin
 
 class WhisperUtil {
     private val vocab = WhisperVocab()
@@ -156,6 +158,11 @@ class WhisperUtil {
 //        float[] fftOut = new float[fftSize * 2];
 //
 //        for (int i = 0; i < mel.nLen; i++) {
+
+//            val fftIn = FloatArray(fftSize) { 0.0f }
+//            val fftOut = FloatArray(fftSize * 2)
+//
+//            for (i in 0 until mel.nLen) {
 /////////////// END of Block ///////////////////////////////////////////////////////////////////////
                     val offset = i * fftStep
 
@@ -410,8 +417,8 @@ class WhisperUtil {
                 var im = 0f
                 for (n in 0 until N) {
                     val angle = (2 * Math.PI * k * n / N).toFloat()
-                    re += (`in`[n] * Math.cos(angle.toDouble())).toFloat()
-                    im -= (`in`[n] * Math.sin(angle.toDouble())).toFloat()
+                    re += (`in`[n] * cos(angle.toDouble())).toFloat()
+                    im -= (`in`[n] * sin(angle.toDouble())).toFloat()
                 }
                 out[k * 2] = re
                 out[k * 2 + 1] = im
