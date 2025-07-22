@@ -143,13 +143,14 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
         outputBuffer.buffer.rewind()
 
-        for (input in inputData) {
+        /*for (input in inputData) {
             inputBuf.putFloat(input)
         }
-        inputBuffer.loadBuffer(inputBuf)
+        inputBuffer.loadBuffer(inputBuf)*/
+        inputBuffer.loadArray(inputData)
 
         // Run inference
-        interpreter!!.run(inputBuffer.buffer, outputBuffer.buffer)
+        interpreter?.run(inputBuffer.buffer, outputBuffer.buffer)
 
         // Retrieve the results
         val outputLen = outputBuffer.intArray.size
@@ -162,9 +163,8 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
             // Get word for token and Skip additional token
             if (token < mWhisperUtil.tokenEOT) {
-                val word = mWhisperUtil.getWordFromToken(token)
                 // Log.d(TAG, "Adding token: $token, word: $word")
-                result.append(word)
+                result.append(mWhisperUtil.getWordFromToken(token))
             } else {
                 // if (token == mWhisperUtil.tokenTranscribe) Log.d(TAG, "It is Transcription...")
                 // if (token == mWhisperUtil.tokenTranslate) Log.d(TAG, "It is Translation...")
