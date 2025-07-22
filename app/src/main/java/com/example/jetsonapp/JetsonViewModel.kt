@@ -17,11 +17,11 @@ import com.example.jetsonapp.recorder.Recorder
 import com.example.jetsonapp.utils.CameraUtil.extractFunctionName
 import com.example.jetsonapp.whisperengine.IWhisperEngine
 import com.example.jetsonapp.whisperengine.WhisperEngine
+import com.example.jetsonapp.whisperengine.WhisperEngineNative
 import com.google.ai.edge.localagents.core.proto.Content
 import com.google.ai.edge.localagents.core.proto.FunctionDeclaration
 import com.google.ai.edge.localagents.core.proto.Part
 import com.google.ai.edge.localagents.core.proto.Tool
-import com.google.ai.edge.localagents.fc.GemmaFormatter
 import com.google.ai.edge.localagents.fc.GenerativeModel
 import com.google.ai.edge.localagents.fc.HammerFormatter
 import com.google.ai.edge.localagents.fc.LlmInferenceBackend
@@ -53,7 +53,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private val context = application
     private var mediaPlayer: MediaPlayer? = null
-    private val whisperEngine: IWhisperEngine = WhisperEngine(context)
+    private val whisperEngine = WhisperEngineNative()
+    // private val whisperEngine: IWhisperEngine = WhisperEngine(context)
     private val recorder: Recorder = Recorder(context)
     private val outputFileWav = File(application.filesDir, RECORDING_FILE_WAV)
     private val languageIdentifier = LanguageIdentification.getClient()
@@ -103,13 +104,18 @@ class JetsonViewModel @javax.inject.Inject constructor(
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
             generativeModel = createGenerativeModel()
-            session = createSession(context)
+            // session = createSession(context)
             updateJetsonIsWorking(false)
         }
     }
 
     init {
-        whisperEngine.initialize(MODEL_PATH, getAssetFilePath(context = context), false)
+        // whisperEngine.initialize(MODEL_PATH, getAssetFilePath(context = context), true) // true
+        whisperEngine.initialize(
+            getAssetFilePath(MODEL_PATH, context) ?: "",
+            getAssetFilePath(VOCAB_PATH, context) ?: "",
+            true
+        )
         recorder.setFilePath(getFilePath(context = context))
 
         initialize()
@@ -127,7 +133,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         try {
             viewModelScope.launch(Dispatchers.IO) {
                 // Offline speech to text
-                transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath)
+                transcribedText = whisperEngine.transcribeFile(outputFileWav.absolutePath).toString()
                 Log.v("transription", transcribedText.trim())
 
                 updateUserPrompt(transcribedText.trim())
@@ -243,7 +249,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                     Log.d("ImageInfo", "Bitmap width: ${it.width}, height: ${it.height}")
                 }
                 // VLM procedure
-                inferenceVLM(bitmap)
+                //inferenceVLM(bitmap)
             }
 
             base64
@@ -268,7 +274,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         }
 
         // VLM procedure
-        inferenceVLM(bitmap)
+        //inferenceVLM(bitmap)
     }
 
     private fun inferenceVLM(bitmap: Bitmap) {
@@ -340,7 +346,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             // gemma-3n-E2B-it-int4.task
             .setModelPath("/data/local/tmp/hammer2p1_05b_seb.task")
             .setMaxTokens(512)
-            .apply { setPreferredBackend(Backend.GPU) }
+            .apply { setPreferredBackend(Backend.CPU) }
             .build()
 
         val llmInference =
@@ -352,15 +358,17 @@ class JetsonViewModel @javax.inject.Inject constructor(
             .setRole("system")
             .addParts(
                 Part.newBuilder()
-                    .setText("You are a helpful assistant.\n" +
-                            "\n" +
-                            "When the user provides input in a language other than English, your first task is to translate it into English before generating a response.\n" +
-                            "\n" +
-                            "If the input is already in English, proceed directly without translating.\n" +
-                            "\n" +
-                            "You can also open the camera or the phone gallery when requested to do.\n" +
-                            "\n" +
-                            "Always ensure the user’s request is understood in English before taking any action or providing a response")
+                    .setText(
+                        "You are a helpful assistant.\n" +
+                                "\n" +
+                                "When the user provides input in a language other than English, your first task is to translate it into English before generating a response.\n" +
+                                "\n" +
+                                "If the input is already in English, proceed directly without translating.\n" +
+                                "\n" +
+                                "You can also open the camera or the phone gallery when requested to do.\n" +
+                                "\n" +
+                                "Always ensure the user’s request is understood in English before taking any action or providing a response"
+                    )
             )
             .build()
 
@@ -402,8 +410,8 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     companion object {
-        private const val MODEL_PATH = "whisper_tiny_en_14.tflite"
-        private const val VOCAB_PATH = "filters_vocab_en.bin"
+        private const val MODEL_PATH = "whisper-base_translate_default_quant.tflite"
+        private const val VOCAB_PATH = "filters_vocab_multilingual.bin"
         private const val RECORDING_FILE_WAV = "recording.wav"
         private const val TAG = "JetsonViewModel"
     }

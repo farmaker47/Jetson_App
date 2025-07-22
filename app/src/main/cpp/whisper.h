@@ -9,6 +9,8 @@
 #include <map>
 #include <string>
 #include <memory>
+#include "tensorflow/lite/core/model_builder.h"
+#include "tensorflow/lite/core/kernels/register.h"
 
 // Define constants
 #define WHISPER_SAMPLE_RATE 16000
@@ -43,10 +45,36 @@ struct whisper_vocab {
 
     static const int token_translwordate = 50358;
     static const int token_transcribe = 50359;
+
+    // Reset the whisper_vocab structure
+    void reset() {
+        id_to_token.clear();
+        n_vocab_additional = 51864;
+        token_eot = 50256;
+        token_sot = 50257;
+        token_prev = 50360;
+        token_solm = 50361;
+        token_not = 50362;
+        token_beg = 50363;
+    }
 };
 
 // Global whisper_vocab instance
 whisper_vocab g_vocab;
+
+// whisper_tflite structure
+struct whisper_tflite {
+    char* buffer = nullptr;
+    long size = 0;
+    std::unique_ptr<tflite::FlatBufferModel> model;
+    tflite::ops::builtin::BuiltinOpResolver resolver;
+    std::unique_ptr<tflite::Interpreter> interpreter;
+    float* input;
+
+    bool is_whisper_tflite_initialized = false;
+};
+
+whisper_tflite g_whisper_tflite;
 
 // whisper_filters structure
 struct whisper_filters {
@@ -252,6 +280,7 @@ bool log_mel_spectrogram(const float* samples, const int n_samples, const int sa
 
     return true;
 }
+
 
 // Log mel spectrogram computation
 bool log_mel_spectrogramJava(const float* samples, const int n_samples, const int sample_rate,
