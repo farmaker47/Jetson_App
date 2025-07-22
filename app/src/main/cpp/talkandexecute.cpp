@@ -289,8 +289,8 @@ void talkandexecute::freeModel() {
 
 std::vector<float>
 talkandexecute::returnMelSpectrogram(std::vector<float> samples, std::vector<float> filtersJava) {
-    timeval start_time{}, end_time{};
-    gettimeofday(&start_time, NULL);
+    // timeval start_time{}, end_time{};
+    // gettimeofday(&start_time, NULL);
 
     // Hack if the audio file size is less than 30ms append with 0's
     samples.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
@@ -301,8 +301,8 @@ talkandexecute::returnMelSpectrogram(std::vector<float> samples, std::vector<flo
                             WHISPER_HOP_LENGTH, WHISPER_N_MEL, processor_count, filtersJava, mel);
     // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "%s", "after");
 
-    gettimeofday(&end_time, NULL);
-    std::cout << "Time taken for Spectrogram: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+    // gettimeofday(&end_time, NULL);
+    // std::cout << "Time taken for Spectrogram: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
     // target_link_libraries(audioEngine log) AT CMAKELIST.txt
     // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_mel", "Time taken for Spectrogram: %ld ms", TIME_DIFF_MS(start_time, end_time));
 

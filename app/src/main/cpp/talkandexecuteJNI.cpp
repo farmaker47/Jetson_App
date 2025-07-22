@@ -8,14 +8,14 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_com_example_jetsonapp_whisperengine_WhisperEngine_createEngine(JNIEnv *env,
                                                                     jobject thiz) {
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_init1", "%s", "start");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_init1", "%s", "start");
     return reinterpret_cast<jlong>(new talkandexecute());
 }
 
 JNIEXPORT jlong JNICALL
 Java_com_example_jetsonapp_whisperengine_WhisperEngineNative_createTFLiteEngine(JNIEnv *env,
                                                                                 jobject thiz) {
-    __android_log_print(ANDROID_LOG_INFO, "TRACKERS_init2", "%s", "start");
+    // __android_log_print(ANDROID_LOG_INFO, "TRACKERS_init2", "%s", "start");
     return reinterpret_cast<jlong>(new talkandexecute());
 }
 
@@ -69,6 +69,7 @@ Java_com_example_jetsonapp_whisperengine_WhisperEngineNative_freeModel(JNIEnv *e
     engine->freeModel();
     delete engine;
 }
+
 extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_example_jetsonapp_whisperengine_WhisperEngineNative_transcribeBuffer(JNIEnv *env, jobject thiz, jlong nativePtr, jfloatArray samples) {
