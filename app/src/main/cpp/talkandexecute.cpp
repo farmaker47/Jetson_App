@@ -3,7 +3,7 @@
 #include <cstring>
 #include <vector>
 #include <thread>
-#include <sstream> // Required for std::stringstream
+#include <sstream>
 #include <sys/time.h>
 
 #include <sys/time.h>
@@ -34,7 +34,7 @@
     exit(1);                                                 \
   }
 
-int talkandexecute:: loadModel(const char *modelPath, const bool isMultilingual) {
+int talkandexecute::loadModel(const char *modelPath, const bool isMultilingual) {
 
     const auto processor_count = std::thread::hardware_concurrency();
 
@@ -49,11 +49,11 @@ int talkandexecute:: loadModel(const char *modelPath, const bool isMultilingual)
 
         /////////////// Load filters and vocab data ///////////////
 
-        const char* vocabData = nullptr;
+        const char *vocabData = nullptr;
         if (isMultilingual)
-            vocabData = reinterpret_cast<const char*>(filters_vocab_multilingual);
+            vocabData = reinterpret_cast<const char *>(filters_vocab_multilingual);
         else
-            vocabData = reinterpret_cast<const char*>(filters_vocab_en);
+            vocabData = reinterpret_cast<const char *>(filters_vocab_en);
 
         // Read the magic number
         int magic = 0;
@@ -153,7 +153,8 @@ int talkandexecute:: loadModel(const char *modelPath, const bool isMultilingual)
         g_whisper_tflite.size = size;
         g_whisper_tflite.buffer = buffer;
 
-        g_whisper_tflite.model = tflite::FlatBufferModel::BuildFromBuffer(g_whisper_tflite.buffer, g_whisper_tflite.size);
+        g_whisper_tflite.model = tflite::FlatBufferModel::BuildFromBuffer(g_whisper_tflite.buffer,
+                                                                          g_whisper_tflite.size);
         TFLITE_MINIMAL_CHECK(g_whisper_tflite.model != nullptr);
 
         // auto* xnnpack_delegate = TfLiteXNNPackDelegateCreate(nullptr);
@@ -162,25 +163,40 @@ int talkandexecute:: loadModel(const char *modelPath, const bool isMultilingual)
         tflite::ops::builtin::BuiltinOpResolver resolver;
         tflite::InterpreterBuilder builder(*(g_whisper_tflite.model), resolver);
 
-        // builder.AddDelegate(xnnpack_delegate);
+        // XNNPACK delegate options
+        TfLiteXNNPackDelegateOptions xnnpack_options = TfLiteXNNPackDelegateOptionsDefault();
+        xnnpack_options.num_threads = processor_count;  // Optional: set number of threads
+
+        // Create the XNNPACK delegate
+        TfLiteDelegate *xnnpack_delegate = TfLiteXNNPackDelegateCreate(&xnnpack_options);
+        if (xnnpack_delegate == nullptr) {
+            std::cerr << "Failed to create XNNPACK delegate" << std::endl;
+            __android_log_print(ANDROID_LOG_INFO, "Failed to create XNNPACK delegate", "time",
+                                "TIME_DIFF_MS(start_time, end_time)");
+        } else {
+            // builder.AddDelegate(xnnpack_delegate); ###### Crashing.
+            __android_log_print(ANDROID_LOG_INFO, "Successful creation of XNNPACK delegate", "timi",
+                                "TIME_DIFF_MS(start_time, end_time)");
+        }
 
         builder(&(g_whisper_tflite.interpreter));
         TFLITE_MINIMAL_CHECK(g_whisper_tflite.interpreter != nullptr);
 
-        // Allocate tensor buffers.
+        // Allocate tensors.
         TFLITE_MINIMAL_CHECK(g_whisper_tflite.interpreter->AllocateTensors() == kTfLiteOk);
 
+        // Optional: set interpreter threading (XNNPACK handles threading internally)
         g_whisper_tflite.interpreter->SetNumThreads(processor_count);
 
         g_whisper_tflite.input = g_whisper_tflite.interpreter->typed_input_tensor<float>(0);
         g_whisper_tflite.is_whisper_tflite_initialized = true;
 
-        gettimeofday(&end_time, NULL);
-        std::cout << "Time taken for TFLite initialization: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
-        __android_log_print(ANDROID_LOG_INFO, "Time taken for TFLite initialization:", "%ld", TIME_DIFF_MS(start_time, end_time));
+        // gettimeofday(&end_time, NULL);
+        // std::cout << "Time taken for TFLite initialization: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+        // __android_log_print(ANDROID_LOG_INFO, "Time taken for TFLite initialization:", "%ld", TIME_DIFF_MS(start_time, end_time));
     }
 
-    std::cout << "Exiting " << __func__ << "()" << std::endl;
+    // std::cout << "Exiting " << __func__ << "()" << std::endl;
     return 0;
 }
 
@@ -203,8 +219,10 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
     }
 
     // Calculate Mel spectrogram on the actual (potentially shorter) audio
-    if (!log_mel_spectrogram_improved(samples.data(), samples.size(), WHISPER_SAMPLE_RATE, WHISPER_N_FFT,
-                                      WHISPER_HOP_LENGTH, WHISPER_N_MEL, processor_count, filters, mel)) {
+    if (!log_mel_spectrogram_improved(samples.data(), samples.size(), WHISPER_SAMPLE_RATE,
+                                      WHISPER_N_FFT,
+                                      WHISPER_HOP_LENGTH, WHISPER_N_MEL, processor_count, filters,
+                                      mel)) {
         std::cerr << "Failed to compute mel spectrogram" << std::endl;
         return "";
     }
@@ -212,7 +230,9 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
     if (INFERENCE_ON_AUDIO_FILE) {
         // --- Part of Optimization 1: Resize TFLite input tensor ---
         // Tell the interpreter the actual shape of our input Mel spectrogram
-        TfLiteStatus resize_status = g_whisper_tflite.interpreter->ResizeInputTensor(0, {1, mel.n_mel, mel.n_len});
+        TfLiteStatus resize_status = g_whisper_tflite.interpreter->ResizeInputTensor(0,
+                                                                                     {1, mel.n_mel,
+                                                                                      mel.n_len});
         if (resize_status != kTfLiteOk) {
             std::cerr << "Failed to resize TFLite input tensor." << std::endl;
             return "";
@@ -226,13 +246,14 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
         }
 
         // Get the input tensor pointer *again* after allocation, as it might have changed
-        float* input_tensor_ptr = g_whisper_tflite.interpreter->typed_input_tensor<float>(0);
+        float *input_tensor_ptr = g_whisper_tflite.interpreter->typed_input_tensor<float>(0);
         memcpy(input_tensor_ptr, mel.data.data(), mel.data.size() * sizeof(float));
 
     } else {
         // This branch uses a pre-generated, fixed-size feature set.
         // We assume the model is already sized correctly for this.
-        memcpy(g_whisper_tflite.input, _content_input_features_bin, WHISPER_N_MEL * WHISPER_MEL_LEN * sizeof(float));
+        memcpy(g_whisper_tflite.input, _content_input_features_bin,
+               WHISPER_N_MEL * WHISPER_MEL_LEN * sizeof(float));
     }
 
     // --- Optimization 2: Remove redundant SetNumThreads call ---
@@ -245,8 +266,9 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
         return "";
     }
 
-    const int* output_tokens = g_whisper_tflite.interpreter->typed_output_tensor<int>(0);
-    const auto* output_tensor = g_whisper_tflite.interpreter->tensor(g_whisper_tflite.interpreter->outputs()[0]);
+    const int *output_tokens = g_whisper_tflite.interpreter->typed_output_tensor<int>(0);
+    const auto *output_tensor = g_whisper_tflite.interpreter->tensor(
+            g_whisper_tflite.interpreter->outputs()[0]);
     const auto output_size = output_tensor->dims->data[output_tensor->dims->size - 1];
 
     // --- Optimization 3: Efficient string building ---
@@ -306,7 +328,8 @@ void talkandexecute::freeModel() {
         g_whisper_tflite.model.reset();        // Reset model to free memory
 
     if (g_whisper_tflite.buffer) {
-        std::cout << __func__ << ": free buffer " << g_whisper_tflite.buffer << " memory" << std::endl;
+        std::cout << __func__ << ": free buffer " << g_whisper_tflite.buffer << " memory"
+                  << std::endl;
         delete[] g_whisper_tflite.buffer;
     }
 
