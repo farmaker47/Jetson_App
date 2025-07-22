@@ -407,6 +407,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         textToSpeech.stop()
         textToSpeech.shutdown()
         languageIdentifier.close()
+        whisperEngine.freeModel()
     }
 
     companion object {

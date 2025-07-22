@@ -73,7 +73,7 @@ class WhisperEngineNative {
         return loadModel(nativePtr, modelPath, isMultilingual)
     }
 
-    private fun freeModel() {
+    fun freeModel() {
         freeModel(nativePtr)
     }
 
