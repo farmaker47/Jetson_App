@@ -9,6 +9,8 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <algorithm> // For std::max and std::fill
+#include <atomic>    // For atomic_max in C++20, or custom implementation
 #include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/core/kernels/register.h"
 
@@ -180,7 +182,133 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
     }
 }
 
-// Log mel spectrogram computation
+// A helper for parallel max finding, safe for C++11/14/17
+// For C++20, you could use std::atomic<double>::fetch_max
+void atomic_max(std::atomic<double>& maximum_value, double const value) noexcept {
+    double prev_value = maximum_value;
+    while (prev_value < value && !maximum_value.compare_exchange_weak(prev_value, value)) {
+    }
+}
+
+// Assume fft() is defined elsewhere
+void fft(const std::vector<float>& in, std::vector<float>& out);
+
+bool log_mel_spectrogram_improved(const float* samples, const int n_samples, const int sample_rate,
+                                  const int fft_size, const int fft_step, const int n_mel,
+                                  const int n_threads, const whisper_filters& filters, whisper_mel& mel) {
+    // --- Pre-computation (mostly unchanged) ---
+    std::vector<float> hann(fft_size);
+    for (int i = 0; i < fft_size; i++) {
+        hann[i] = 0.5f * (1.0f - cosf((2.0f * M_PI * i) / fft_size));
+    }
+
+    mel.n_mel = n_mel;
+    mel.n_len = n_samples / fft_step;
+    mel.data.resize(mel.n_mel * mel.n_len);
+
+    const int n_fft = 1 + fft_size / 2;
+
+    // --- Main computation loop (parallelized) ---
+    std::vector<std::thread> workers(n_threads);
+    for (int iw = 0; iw < n_threads; ++iw) {
+        workers[iw] = std::thread([&](int ith) {
+            // Improvement 1: Allocate FFT buffers once per thread, outside the loop
+            std::vector<float> fft_in(fft_size);
+            std::vector<float> fft_out(2 * fft_size); // For complex output
+
+            for (int i = ith; i < mel.n_len; i += n_threads) {
+                const int offset = i * fft_step;
+
+                // Improvement 2: Optimize windowing and padding
+                // This avoids the 'if' branch in the inner loop for most samples
+                const int frame_end = offset + fft_size;
+                if (frame_end < n_samples) {
+                    for (int j = 0; j < fft_size; j++) {
+                        fft_in[j] = hann[j] * samples[offset + j];
+                    }
+                } else {
+                    // This frame requires padding
+                    std::fill(fft_in.begin(), fft_in.end(), 0.0f);
+                    for (int j = 0; j < fft_size; j++) {
+                        if (offset + j < n_samples) {
+                            fft_in[j] = hann[j] * samples[offset + j];
+                        }
+                    }
+                }
+
+                // FFT -> mag^2 (Power Spectrum)
+                fft(fft_in, fft_out);
+
+                // Note: The original code for power spectrum calculation was a bit unusual.
+                // A more standard approach is shown here, which calculates power for n_fft bins.
+                std::vector<float> power_spectrum(n_fft);
+                for (int j = 0; j < n_fft; j++) {
+                    power_spectrum[j] = (fft_out[2 * j + 0] * fft_out[2 * j + 0] +
+                                         fft_out[2 * j + 1] * fft_out[2 * j + 1]);
+                }
+
+                // Mel spectrogram calculation
+                for (int j = 0; j < mel.n_mel; j++) {
+                    // Improvement 3: Use float, and potential for SIMD
+                    float sum = 0.0f;
+                    const float* filter_row = &filters.data[j * n_fft];
+
+                    // This loop is a dot product, a prime candidate for optimization
+                    // #pragma omp simd reduction(+:sum) // Hint for compiler vectorization
+                    for (int k = 0; k < n_fft; k++) {
+                        sum += power_spectrum[k] * filter_row[k];
+                    }
+
+                    sum = (sum < 1e-10f) ? 1e-10f : sum;
+                    mel.data[j * mel.n_len + i] = log10f(sum);
+                }
+            }
+        }, iw);
+    }
+
+    for (int iw = 0; iw < n_threads; ++iw) {
+        workers[iw].join();
+    }
+
+    // --- Post-processing (now also parallelized) ---
+    // Improvement 4: Parallelize the max-finding and normalization steps
+
+    // 4a. Parallel find max (reduction)
+    std::atomic<double> mmax_atomic(-1e20);
+    for (int iw = 0; iw < n_threads; ++iw) {
+        workers[iw] = std::thread([&](int ith) {
+            double local_mmax = -1e20;
+            // Each thread processes a chunk of the data
+            for (int i = ith; i < mel.data.size(); i += n_threads) {
+                if (mel.data[i] > local_mmax) {
+                    local_mmax = mel.data[i];
+                }
+            }
+            atomic_max(mmax_atomic, local_mmax);
+        }, iw);
+    }
+    for (auto& worker : workers) {
+        worker.join();
+    }
+    double mmax = mmax_atomic.load() - 8.0;
+
+    // 4b. Parallel clamping and normalization
+    for (int iw = 0; iw < n_threads; ++iw) {
+        workers[iw] = std::thread([&](int ith) {
+            for (int i = ith; i < mel.data.size(); i += n_threads) {
+                float val = mel.data[i];
+                val = (val < mmax) ? mmax : val;
+                mel.data[i] = (val + 4.0f) / 4.0f;
+            }
+        }, iw);
+    }
+    for (auto& worker : workers) {
+        worker.join();
+    }
+
+    return true;
+}
+
 bool log_mel_spectrogram(const float* samples, const int n_samples, const int sample_rate,
                         const int fft_size, const int fft_step, const int n_mel,
                         const int n_threads, const whisper_filters& filters, whisper_mel& mel) {

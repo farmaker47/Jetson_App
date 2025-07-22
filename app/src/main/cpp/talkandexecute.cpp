@@ -178,21 +178,21 @@ int talkandexecute:: loadModel(const char *modelPath, const bool isMultilingual)
 }
 
 std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
-    timeval start_time{}, end_time{};
-    gettimeofday(&start_time, NULL);
+    // timeval start_time{}, end_time{};
+    // gettimeofday(&start_time, NULL);
 
     // Hack if the audio file size is less than 30ms append with 0's
     samples.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
     const auto processor_count = std::thread::hardware_concurrency();
 
-    if (!log_mel_spectrogram(samples.data(), samples.size(), WHISPER_SAMPLE_RATE, WHISPER_N_FFT,
+    if (!log_mel_spectrogram_improved(samples.data(), samples.size(), WHISPER_SAMPLE_RATE, WHISPER_N_FFT,
                              WHISPER_HOP_LENGTH, WHISPER_N_MEL, processor_count, filters, mel)) {
         std::cerr << "Failed to compute mel spectrogram" << std::endl;
         return "";
     }
 
-    gettimeofday(&end_time, NULL);
-    std::cout << "Time taken for Spectrogram: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+    // gettimeofday(&end_time, NULL);
+    // std::cout << "Time taken for Spectrogram: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
 
     if (INFERENCE_ON_AUDIO_FILE) {
         memcpy(g_whisper_tflite.input, mel.data.data(), mel.n_mel * mel.n_len * sizeof(float));
@@ -200,7 +200,7 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
         memcpy(g_whisper_tflite.input, _content_input_features_bin, WHISPER_N_MEL * WHISPER_MEL_LEN * sizeof(float)); // to load pre-generated input_features
     } // end of audio file processing
 
-    gettimeofday(&start_time, NULL);
+    // gettimeofday(&start_time, NULL);
 
     // Run inference
     g_whisper_tflite.interpreter->SetNumThreads(processor_count);
@@ -208,8 +208,8 @@ std::string talkandexecute::transcribeBuffer(std::vector<float> samples) {
         return "";
     }
 
-    gettimeofday(&end_time, NULL);
-    std::cout << "Time taken for Interpreter: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+    // gettimeofday(&end_time, NULL);
+    // std::cout << "Time taken for Interpreter: " << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
 
     int output = g_whisper_tflite.interpreter->outputs()[0];
     TfLiteTensor *output_tensor = g_whisper_tflite.interpreter->tensor(output);
