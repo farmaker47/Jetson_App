@@ -91,7 +91,7 @@ class WhisperEngine(private val context: Context) : IWhisperEngine {
 
         val tfliteOptions = Interpreter.Options()
 
-        // tfliteOptions.setUseXNNPACK(true)
+        tfliteOptions.setUseXNNPACK(true)
         tfliteOptions.setNumThreads(Runtime.getRuntime().availableProcessors())
 
         interpreter = Interpreter(retFile, tfliteOptions)
