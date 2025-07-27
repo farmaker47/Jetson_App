@@ -138,7 +138,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
         rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             uri?.let {
                 scope.launch {
-                    delay(1500)
+                    delay(500)
                     jetsonViewModel.updateSelectedImage(context, uri)
                     imageUri = uri
                     jetsonViewModel.updatePhoneGalleryTriggered(false)
@@ -508,7 +508,7 @@ fun MainScreen(jetsonViewModel: JetsonViewModel = hiltViewModel()) {
                                     imageUri = "".toUri()
                                     capturedBitmap = bitmap
                                     scope.launch {
-                                        delay(1500)
+                                        delay(500)
                                         jetsonViewModel.convertBitmapToBase64(bitmap)
                                     }
                                 } catch (e: Exception) {

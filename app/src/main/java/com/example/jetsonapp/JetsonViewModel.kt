@@ -121,6 +121,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
         val reactContext = ReactApplicationContext(context)
         rnLlama = RNLlama(reactContext)
+        textToSpeech = TextToSpeech(context, this@JetsonViewModel)
 
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
@@ -369,7 +370,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             // gemma-3n-E2B-it-int4.task
             .setModelPath("/data/local/tmp/hammer2p1_05b_seb.task")
             .setMaxTokens(512)
-            .apply { setPreferredBackend(Backend.CPU) }
+            .apply { setPreferredBackend(Backend.GPU) }
             .build()
 
         val llmInference =
@@ -435,7 +436,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     companion object {
 
-        private const val MODEL_PATH = "whisper-base_translate_default_quant.tflite"
+        private const val MODEL_PATH = "whisper-tiny_translate_default_quant.tflite"
         private const val VOCAB_PATH = "filters_vocab_multilingual.bin"
         private const val RECORDING_FILE_WAV = "recording.wav"
         private const val TAG = "JetsonViewModel"
@@ -673,7 +674,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
                 "content" to listOf(
                     mapOf(
                         "type" to "text",
-                        "text" to "What do you see in this image? Describe it in detail.\n<__media__>"
+                        "text" to "What do you see in this image? Describe it in 70 words.\n<__media__>"
                     ),
                     /*mapOf(
                         "type" to "image_url",
@@ -771,6 +772,9 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private fun runVisionCompletion(prompt: String, imageFile: String) {
         val stopWords = Arguments.fromList(listOf("</s>", "\n", "User:", "<end_of_utterance>"))
+        val chunkBuffer = StringBuilder()
+        var stringBuilder = ""
+        var chunkCounter = 0
 
         val completionParams = Arguments.createMap().apply {
             putString("prompt", prompt)
@@ -787,7 +791,26 @@ class JetsonViewModel @javax.inject.Inject constructor(
         val streamCallback = RNLlama.StreamCallback { token ->
             // Append the new token to our result state
             completionResult += token
-            Log.d("Llama Stream", "Streaming: $completionResult")
+            // Log.d("Llama Stream", "Streaming: $completionResult")
+            updateJetsonIsWorking(false)
+            stringBuilder += token
+            // Log.v("image_partial", "$stringBuilder $done")
+            updateVlmResult(transcribedText.trim() + "\n\n" + stringBuilder)
+
+            // Speak the chunks
+            chunkBuffer.append(token)
+            chunkCounter++
+
+            // Check if 7 chunks have been collected
+            if (chunkCounter == 7) {
+                // Speak out the combined text of the last 7 chunks
+                // speakOut(chunkBuffer.toString())
+                // Log.v("finished_main", chunkBuffer.toString())
+
+                // Reset the buffer and the counter for the next group of chunks
+                chunkBuffer.clear()
+                chunkCounter = 0
+            }
         }
 
         val completionPromise = object : Promise {
