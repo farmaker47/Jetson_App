@@ -11,13 +11,20 @@ import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.jetsonapp.recorder.Recorder
 import com.example.jetsonapp.utils.CameraUtil.extractFunctionName
-import com.example.jetsonapp.whisperengine.IWhisperEngine
-import com.example.jetsonapp.whisperengine.WhisperEngine
 import com.example.jetsonapp.whisperengine.WhisperEngineNative
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.UiThreadUtil.runOnUiThread
+import com.facebook.react.bridge.WritableMap
 import com.google.ai.edge.localagents.core.proto.Content
 import com.google.ai.edge.localagents.core.proto.FunctionDeclaration
 import com.google.ai.edge.localagents.core.proto.Part
@@ -26,6 +33,7 @@ import com.google.ai.edge.localagents.fc.GenerativeModel
 import com.google.ai.edge.localagents.fc.HammerFormatter
 import com.google.ai.edge.localagents.fc.LlmInferenceBackend
 import com.google.ai.edge.localagents.fc.ModelFormatterOptions
+import com.google.gson.Gson
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.genai.llminference.GraphOptions
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
@@ -33,6 +41,7 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference.Backend
 import com.google.mediapipe.tasks.genai.llminference.LlmInference.LlmInferenceOptions
 import com.google.mediapipe.tasks.genai.llminference.LlmInferenceSession
 import com.google.mlkit.nl.languageid.LanguageIdentification
+import com.rnllama.RNLlama
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +53,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class JetsonViewModel @javax.inject.Inject constructor(
@@ -53,6 +63,13 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private val context = application
     private var mediaPlayer: MediaPlayer? = null
+    private lateinit var rnLlama: RNLlama
+    private var isLlamaReady by mutableStateOf(false)
+    private var isCompleting by mutableStateOf(false)
+    private var llamaStatus by mutableStateOf("Initializing...")
+    private var completionResult by mutableStateOf("")
+    private var isMultimodalReady by mutableStateOf(false)
+    private var tokensPerSecond by mutableIntStateOf(0)
     private val whisperEngine = WhisperEngineNative()
     // private val whisperEngine: IWhisperEngine = WhisperEngine(context)
     private val recorder: Recorder = Recorder(context)
@@ -101,10 +118,14 @@ class JetsonViewModel @javax.inject.Inject constructor(
 
     private fun initialize() {
         updateJetsonIsWorking(true)
+
+        val reactContext = ReactApplicationContext(context)
+        rnLlama = RNLlama(reactContext)
+
         // Initialize generativeModel and session here
         viewModelScope.launch(Dispatchers.IO) {
             generativeModel = createGenerativeModel()
-            // session = createSession(context)
+            initializeVisionContext()
             updateJetsonIsWorking(false)
         }
     }
@@ -257,6 +278,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
             Log.e("ImageUtils", "Error processing image", e)
             ""
         }
+        startVisionCompletion()
     }
 
     fun convertBitmapToBase64(bitmap: Bitmap) {
@@ -274,6 +296,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
         }
 
         // VLM procedure
+        startVisionCompletion()
         //inferenceVLM(bitmap)
     }
 
@@ -411,6 +434,7 @@ class JetsonViewModel @javax.inject.Inject constructor(
     }
 
     companion object {
+
         private const val MODEL_PATH = "whisper-base_translate_default_quant.tflite"
         private const val VOCAB_PATH = "filters_vocab_multilingual.bin"
         private const val RECORDING_FILE_WAV = "recording.wav"
@@ -494,6 +518,380 @@ class JetsonViewModel @javax.inject.Inject constructor(
         } else {
             // TTS initialization failed
             Log.e("TTS", "Initialization failed")
+        }
+    }
+
+    // Multimodal VLMs
+    private fun initializeVisionContext() {
+        // --- MODIFIED: Add ctx_shift: false for multimodal ---
+        val params = Arguments.createMap().apply {
+            putString("model", "/data/local/tmp/SmolVLM2-500M-Video-Instruct-Q8_0.gguf") // Llama-3.2-1B-Instruct-Q8_0.gguf
+            putInt("n_ctx", 4096)
+            // putInt("n_gpu_layers", 99)
+            putBoolean("ctx_shift", false) // Crucial for multimodal models
+        }
+
+        val promise = object : Promise {
+            override fun resolve(value: Any?) {
+                Log.d("Llama init", "Llama context initialized successfully!")
+                runOnUiThread {
+                    llamaStatus = "Main context loaded! Initializing multimodal projector..."
+                    isLlamaReady = true
+
+                    initializeMultimodal()
+                }
+            }
+
+            override fun reject(code: String?, message: String?) {
+
+            }
+
+            override fun reject(code: String?, throwable: Throwable?) {
+            }
+
+            override fun reject(code: String?, message: String?, e: Throwable?) {
+                Log.e("Llama init", "Failed to initialize Llama context: $message", e)
+                runOnUiThread { llamaStatus = "Error: Failed to load Llama context.\n${message}" }
+            }
+
+            override fun reject(throwable: Throwable?) {
+            }
+
+            override fun reject(throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, message: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(
+                code: String?,
+                message: String?,
+                throwable: Throwable?,
+                userInfo: WritableMap?
+            ) {
+            }
+
+            override fun reject(message: String?) {
+            }
+        }
+
+        llamaStatus = "Loading model: VLM..."
+        rnLlama.initContext(1.0, params, promise)
+    }
+
+    private fun initializeMultimodal() {
+
+        val params = Arguments.createMap().apply {
+            putString("path", "/data/local/tmp/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf") // mmproj-ultravox-v0_5-llama-3_2-1b-f16.gguf
+        }
+
+        val promise = object : Promise {
+            override fun resolve(value: Any?) {
+                if (value as Boolean) {
+                    Log.d("Llama init", "Multimodal support initialized successfully!")
+                    runOnUiThread {
+                        llamaStatus = "Model and projector loaded. Ready!"
+                        isMultimodalReady = true
+                    }
+                } else {
+                    reject(null, "initMultimodal returned false.", null)
+                }
+            }
+
+            override fun reject(code: String?, message: String?) {
+
+            }
+
+            override fun reject(code: String?, throwable: Throwable?) {
+            }
+
+            override fun reject(code: String?, message: String?, e: Throwable?) {
+                Log.e("Llama init", "Failed to init multimodal: $message", e)
+                runOnUiThread {
+                    llamaStatus = "Error: Failed to init multimodal projector.\n$message"
+                }
+            }
+
+            override fun reject(throwable: Throwable?) {
+            }
+
+            override fun reject(throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, message: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(
+                code: String?,
+                message: String?,
+                throwable: Throwable?,
+                userInfo: WritableMap?
+            ) {
+            }
+
+            override fun reject(message: String?) {
+            }
+        }
+
+        rnLlama.initMultimodal(1.0, params, promise)
+    }
+
+    private fun startVisionCompletion() {
+        if (!isMultimodalReady || isCompleting) return
+
+        isCompleting = true
+        completionResult = ""
+        llamaStatus = "Formatting vision prompt..."
+
+//        val messages = listOf(
+//            mapOf(
+//                "role" to "user",
+//                "content" to "What do you see in this image? Describe it in detail.\n<__media__>"
+//            )
+//
+//        )
+//        val messages2 = listOf(
+//            mapOf("role" to "system", "content" to "You are a helpful assistant."),
+//            mapOf("role" to "user", "content" to "What do you see in this image? Describe it in detail.")
+//        )
+
+        val messages2 = listOf(
+            mapOf(
+                "role" to "user",
+                "content" to listOf(
+                    mapOf(
+                        "type" to "text",
+                        "text" to "What do you see in this image? Describe it in detail.\n<__media__>"
+                    ),
+                    /*mapOf(
+                        "type" to "image_url",
+                        "image_url" to mapOf(
+                            "url" to "file:///data/local/tmp/bike_896.png"
+                            // Or: "base64" to "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD..."
+                        )
+                    )*/
+                )
+            )
+        )
+        val messagesJson = Gson().toJson(messages2)
+
+        val formatParams = Arguments.createMap()
+
+        val formatPromise = object : Promise {
+            override fun resolve(value: Any?) {
+                val formattedPrompt = value as String
+                Log.d("Llama Vision", "Formatted Prompt: $formattedPrompt")
+
+                runOnUiThread { llamaStatus = "Generating description..." }
+
+                // Format the media to the expected format
+                "data:image/png;base64,$selectedImage"
+
+                runVisionCompletion(
+                    formattedPrompt,
+                    "data:image/png;base64,$selectedImage"
+                )
+
+
+                // OR if you have an image file
+                /*encodeFileToBase64DataUri("/data/local/tmp/lightning.png")?.let {
+                    runVisionCompletion(
+                        formattedPrompt,
+                        it
+                    )
+                }*/
+
+                // OR
+                /*runVisionCompletion(
+                    formattedPrompt,
+                    "/data/local/tmp/bike_896.png"
+                )*/
+            }
+
+            override fun reject(code: String?, message: String?) {
+
+            }
+
+            override fun reject(code: String?, throwable: Throwable?) {
+            }
+
+            override fun reject(code: String?, message: String?, e: Throwable?) {
+                Log.e("Llama Vision", "Failed to format chat: $message", e)
+                runOnUiThread { isCompleting = false; llamaStatus = "Error formatting prompt." }
+            }
+
+            override fun reject(throwable: Throwable?) {
+            }
+
+            override fun reject(throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, message: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(
+                code: String?,
+                message: String?,
+                throwable: Throwable?,
+                userInfo: WritableMap?
+            ) {
+            }
+
+            override fun reject(message: String?) {
+            }
+        }
+
+        rnLlama.getFormattedChat(1.0, messagesJson, null, formatParams, formatPromise)
+
+        // Just to get information about the multimodal capabilities
+        // Use with some modifications above
+        // rnLlama.getMultimodalSupport(1.0, formatPromise)
+        // Get some info
+        // rnLlama.modelInfo()
+    }
+
+
+    private fun runVisionCompletion(prompt: String, imageFile: String) {
+        val stopWords = Arguments.fromList(listOf("</s>", "\n", "User:", "<end_of_utterance>"))
+
+        val completionParams = Arguments.createMap().apply {
+            putString("prompt", prompt)
+            putInt("n_predict", 100)
+            putArray("stop", stopWords)
+            putDouble("temperature", 0.1)
+
+            // If an image file is provided, add it to the media_paths array
+            val mediaPaths = Arguments.createArray()
+            mediaPaths.pushString(imageFile)
+            putArray("media_paths", mediaPaths)
+        }
+
+        val streamCallback = RNLlama.StreamCallback { token ->
+            // Append the new token to our result state
+            completionResult += token
+            Log.d("Llama Stream", "Streaming: $completionResult")
+        }
+
+        val completionPromise = object : Promise {
+            override fun resolve(value: Any?) {
+                val result = value as WritableMap
+                val resultText = result.getString("text") ?: "No text in result"
+                val timings = result.getMap("timings")
+
+                val tps = timings?.getDouble("predicted_per_second") ?: 0.0
+                tokensPerSecond = tps.roundToInt()
+
+                Log.d("Llama Chat", "Completion finished.")
+                Log.d("Llama Chat", "Result text: $resultText")
+                if (timings != null) {
+                    Log.d(
+                        "Llama Chat",
+                        "Timings: Predicted tokens: ${timings.getInt("predicted_n")} in ${
+                            timings.getInt("predicted_ms")
+                        } ms"
+                    )
+                }
+
+                Log.d("Llama Chat", "Completion finished.")
+                runOnUiThread {
+                    completionResult = resultText.trim()
+                    llamaStatus = "Completed!"
+                    isCompleting = false
+                }
+            }
+
+            override fun reject(code: String?, message: String?) {
+            }
+
+            override fun reject(code: String?, throwable: Throwable?) {
+            }
+
+            override fun reject(code: String?, message: String?, e: Throwable?) {
+                Log.e("Llama Chat", "Completion failed: $message", e)
+                runOnUiThread {
+                    llamaStatus = "Error during completion: $message"
+                    isCompleting = false
+                }
+            }
+
+            override fun reject(throwable: Throwable?) {
+            }
+
+            override fun reject(throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(code: String?, throwable: Throwable?, userInfo: WritableMap?) {
+            }
+
+            override fun reject(code: String?, message: String?, userInfo: WritableMap) {
+            }
+
+            override fun reject(
+                code: String?,
+                message: String?,
+                throwable: Throwable?,
+                userInfo: WritableMap?
+            ) {
+            }
+
+            override fun reject(message: String?) {
+            }
+        }
+
+        rnLlama.completionStream(1.0, completionParams, streamCallback, completionPromise)
+        // OR
+        // rnLlama.completion(1.0, completionParams, completionPromise)
+    }
+
+    private fun encodeFileToBase64DataUri(filePath: String): String? {
+        return try {
+            val file = File(filePath)
+
+            if (!file.exists() || !file.canRead()) {
+                Log.e("Base64", "File does not exist or cannot be read: $filePath")
+                llamaStatus = "Error: Could not read file from path."
+                return null
+            }
+
+            val bytes = file.readBytes()
+            val base64String = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+            val mimeType = when (filePath.substringAfterLast('.').lowercase()) {
+                "jpg", "jpeg" -> "image/jpeg"
+                "png" -> "image/png"
+                "wav" -> "audio/wav"
+                "mp3" -> "audio/mpeg"
+                // "mp4" -> "video/mp4"
+                // "pdf" -> "application/pdf"
+                else -> "application/octet-stream" // fallback
+            }
+
+            "data:$mimeType;base64,$base64String"
+        } catch (e: Exception) {
+            Log.e("Base64", "Error encoding file to base64 from path: $filePath", e)
+            llamaStatus = "Error: Could not encode file."
+            null
         }
     }
 }

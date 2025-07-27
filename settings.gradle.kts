@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Jetson App"
 include(":app")
+include(":llamaImpl")
+project(":llamaImpl").projectDir = file("llamaImpl/android")
  
